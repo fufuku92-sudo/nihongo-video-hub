@@ -12,12 +12,18 @@ const expectedKeys: HomeMotionKey[] = [
   "heroImage",
   "switchSection",
   "switchTabs",
+  "switchTrigger",
+  "tabViewport",
+  "videoTabPanel",
+  "songTabPanel",
   "videoPanel",
   "videoGrid",
   "songPanel",
   "songNotes",
   "songGrid",
   "mobileSwitcher",
+  "mobileSwitcherButton",
+  "activeMobileSwitcherButton",
 ];
 
 describe("HOME_MOTION", () => {
@@ -38,6 +44,20 @@ describe("HOME_MOTION", () => {
     expect(HOME_MOTION.heroTitle).toContain("motion-delay-3");
     expect(HOME_MOTION.heroCopy).toContain("motion-delay-4");
     expect(HOME_MOTION.heroActions).toContain("motion-delay-5");
+  });
+
+  it("defines smooth tab transition classes for video and song panels", () => {
+    expect(HOME_MOTION.tabViewport).toBe("motion-tab-viewport");
+    expect(HOME_MOTION.videoTabPanel).toContain("motion-tab-panel");
+    expect(HOME_MOTION.videoTabPanel).toContain("motion-tab-panel-videos");
+    expect(HOME_MOTION.songTabPanel).toContain("motion-tab-panel");
+    expect(HOME_MOTION.songTabPanel).toContain("motion-tab-panel-songs");
+  });
+
+  it("keeps desktop and mobile tab switches using shared motion utilities", () => {
+    expect(HOME_MOTION.switchTrigger).toBe("motion-switch-trigger");
+    expect(HOME_MOTION.mobileSwitcherButton).toBe("motion-switch-button");
+    expect(HOME_MOTION.activeMobileSwitcherButton).toBe("motion-switch-button-active");
   });
 
   it("defines a reduced motion media query token for accessibility checks", () => {

@@ -275,7 +275,7 @@ export default function Home() {
                 const Icon = option.value === "videos" ? Video : Music2;
                 const activeClass = option.accent === "ink" ? "border-[#21392f] shadow-[6px_6px_0_#21392f] data-[state=active]:bg-[#21392f]" : "border-[#b7442e] shadow-[6px_6px_0_#b7442e] data-[state=active]:bg-[#b7442e]";
                 return (
-                  <TabsTrigger key={option.value} value={option.value} className={`min-h-24 rounded-none border-2 bg-[#f8f0de] p-4 text-left data-[state=active]:text-[#fff7e6] ${activeClass}`}>
+                  <TabsTrigger key={option.value} value={option.value} className={`min-h-24 rounded-none border-2 bg-[#f8f0de] p-4 text-left data-[state=active]:text-[#fff7e6] ${HOME_MOTION.switchTrigger} ${activeClass}`}>
                     <span className="flex w-full items-start gap-3">
                       <Icon className="mt-1 h-5 w-5 shrink-0" />
                       <span>
@@ -291,8 +291,9 @@ export default function Home() {
         </div>
       </section>
 
+      <div className={HOME_MOTION.tabViewport} aria-live="polite">
       {activeStudyMode === "videos" ? (
-      <section id="catalog" className="relative px-5 py-16 md:px-10 lg:px-16">
+      <section key="videos-tab-panel" id="catalog" className={`relative px-5 py-16 md:px-10 lg:px-16 ${HOME_MOTION.videoTabPanel}`}>
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
             <div>
@@ -445,7 +446,7 @@ export default function Home() {
 
 
       {activeStudyMode === "songs" ? (
-      <section id="songs" className="relative border-y border-[#21392f]/15 bg-[#21392f] px-5 py-16 text-[#fff7e6] md:px-10 lg:px-16">
+      <section key="songs-tab-panel" id="songs" className={`relative border-y border-[#21392f]/15 bg-[#21392f] px-5 py-16 text-[#fff7e6] md:px-10 lg:px-16 ${HOME_MOTION.songTabPanel}`}>
         <div className="absolute inset-0 bg-[url('https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_paper_pattern-2qjVZvdvYrMsj2KwtsxgWV.webp')] bg-cover bg-center opacity-10" />
         <div className="relative z-10 mx-auto max-w-7xl">
           <div className="mb-10 grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
@@ -568,6 +569,7 @@ export default function Home() {
         </div>
       </section>
       ) : null}
+      </div>
 
       <footer className="px-5 py-8 text-sm leading-6 text-[#314a40] md:px-10 lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-[#21392f]/15 pt-6 md:flex-row md:items-center md:justify-between">
@@ -594,7 +596,7 @@ export default function Home() {
                 type="button"
                 aria-pressed={isActive}
                 onClick={() => switchStudyMode(option.value)}
-                className={`flex min-h-14 items-center justify-center gap-2 border-2 px-3 py-3 text-sm font-black transition ${isActive ? "border-[#21392f] bg-[#21392f] text-[#fff7e6] shadow-[4px_4px_0_#b7442e]" : "border-[#21392f]/25 bg-[#fff8e9] text-[#21392f] shadow-[3px_3px_0_#24628f]"}`}
+                className={`flex min-h-14 items-center justify-center gap-2 border-2 px-3 py-3 text-sm font-black transition ${HOME_MOTION.mobileSwitcherButton} ${isActive ? `border-[#21392f] bg-[#21392f] text-[#fff7e6] shadow-[4px_4px_0_#b7442e] ${HOME_MOTION.activeMobileSwitcherButton}` : "border-[#21392f]/25 bg-[#fff8e9] text-[#21392f] shadow-[3px_3px_0_#24628f]"}`}
               >
                 <Icon className="h-4 w-4" />
                 <span>{option.label}</span>
