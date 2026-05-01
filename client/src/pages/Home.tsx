@@ -227,13 +227,13 @@ export default function Home() {
           <div className="max-w-3xl pt-10 lg:pt-0">
             <div className="mb-8 inline-flex items-center gap-2 border border-[#21392f]/25 bg-[#f8f0de]/90 px-3 py-2 text-sm font-semibold shadow-[3px_3px_0_#24628f]">
               <ShieldCheck className="h-4 w-4 text-[#2f5d46]" />
-              JLPT N5–N1 影片索引
+              JLPT N5–N1 學習入口
             </div>
             <h1 className="font-serif text-5xl font-black leading-[0.95] tracking-[-0.04em] text-[#21392f] md:text-7xl lg:text-8xl">
               從 N5 到 N1，沿著日語學習路線前進。
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-[#314a40] md:text-xl">
-              這裡整理多個 YouTube 頻道提供的優質日文學習影片，依 JLPT 級別與主題做成免費學習路線圖。本站以非營利方式協助學習者快速找到適合內容，並將流量導回原影片與原作者。
+              先選影片或歌曲，再依照自己的程度開始學。每天看一點、聽一點，慢慢累積日文語感。
             </p>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <a href="#study-switch" onClick={() => setActiveStudyMode("videos")}>
@@ -252,9 +252,9 @@ export default function Home() {
       <section id="study-switch" className="relative border-b border-[#21392f]/15 bg-[#fff8e9] px-5 py-8 md:px-10 lg:px-16">
         <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.28em] text-[#b7442e]">Choose Your Platform</p>
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-[#b7442e]">Start Here</p>
             <h2 className="mt-2 font-serif text-3xl font-black tracking-[-0.03em] text-[#21392f] md:text-4xl">今天想怎麼學日文？</h2>
-            <p className="mt-3 text-sm leading-6 text-[#314a40] md:text-base">先選學習方式，再進入對應內容；手機上不需要一路滑到底，也不會一次看到太多分類按鈕。</p>
+            <p className="mt-3 text-sm leading-6 text-[#314a40] md:text-base">想看教學影片，或想用歌曲練習，都可以從這裡開始。</p>
           </div>
           <Tabs value={activeStudyMode} onValueChange={(value) => setActiveStudyMode(value as StudyMode)} className="w-full">
             <TabsList className="grid h-auto w-full grid-cols-1 gap-3 rounded-none bg-transparent p-0 sm:grid-cols-2">
@@ -283,11 +283,11 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
             <div>
-              <p className="mb-3 text-sm font-black uppercase tracking-[0.32em] text-[#b7442e]">Route Selection</p>
-              <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">選擇你的 JLPT 月台</h2>
+              <p className="mb-3 text-sm font-black uppercase tracking-[0.32em] text-[#b7442e]">Pick Your Level</p>
+              <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">選擇你的 JLPT 程度</h2>
             </div>
             <p className="max-w-3xl text-base leading-7 text-[#314a40]">
-              這份清單會持續整理與補充公開 YouTube 學習資源。所有影片皆保留原頻道名稱與 YouTube 連結，本站只做分類、索引與學習導覽，方便大家免費學習。
+              選一個程度，再挑文法、單字、聽解或讀解影片開始練習。
             </p>
           </div>
 
@@ -441,7 +441,7 @@ export default function Home() {
               <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">日文歌曲學習區</h2>
             </div>
             <p className="max-w-3xl text-base leading-7 text-[#f4ecd8]/85">
-              這裡可放你喜歡的日文歌，搭配官方或授權歌詞來源、單字重點、文法提示與聽力練習。本站不自動產生或重製商業歌曲完整歌詞，而是協助整理合規的學習導覽。
+              選一首喜歡的歌，跟著旋律練聽力、單字和語感。
             </p>
           </div>
 
@@ -497,7 +497,7 @@ export default function Home() {
             <div className="border-2 border-[#f4ecd8]/30 bg-[#f8f0de] p-8 text-[#21392f] shadow-[10px_10px_0_#b7442e]">
               <Music2 className="mb-4 h-9 w-9 text-[#b7442e]" />
               <h3 className="font-serif text-3xl font-black">目前還沒有新增歌曲。</h3>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-[#314a40]">管理員可以到後台新增 YouTube 歌曲連結、歌手、官方歌詞來源與學習重點。新增後會自動出現在這個區塊。</p>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-[#314a40]">歌曲整理中，之後會在這裡提供適合練聽力與單字的日文歌。</p>
             </div>
           ) : filteredSongs.length === 0 ? (
             <div className="border-2 border-[#f4ecd8]/30 bg-[#f8f0de] p-8 text-[#21392f] shadow-[10px_10px_0_#b7442e]">
@@ -559,13 +559,13 @@ export default function Home() {
       <footer className="px-5 py-8 text-sm leading-6 text-[#314a40] md:px-10 lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-[#21392f]/15 pt-6 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-2">
-            <p className="font-bold">Nihongo Video Hub｜免費、非營利的 YouTube 日文學習影片整合平台。</p>
+            <p className="font-bold">Nihongo Video Hub｜用影片與歌曲陪你學日文。</p>
             <a href="/sources" className="w-fit font-bold text-[#b7442e] underline-offset-4 transition hover:text-[#8f2f1f] hover:underline">
               來源聲明
             </a>
           </div>
           <p className="max-w-2xl text-[#314a40]/75">
-            感謝各 YouTube 頻道與創作者提供公開且實用的日文學習資源。本站不下載、不重新上傳，也不販售內容；僅整理影片資訊並導向原頁觀看，希望協助學習者找到好內容，同時增加原創作者的曝光。
+            找到想看的內容後，可以前往原影片或原頻道繼續學習。
           </p>
         </div>
       </footer>
