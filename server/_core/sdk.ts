@@ -18,6 +18,21 @@ import type {
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
 
+export function getRedirectUriFromState(state: string): string {
+  const decoded = Buffer.from(state, "base64").toString("utf8");
+
+  try {
+    const parsed = JSON.parse(decoded) as { redirectUri?: unknown };
+    if (typeof parsed.redirectUri === "string" && parsed.redirectUri.length > 0) {
+      return parsed.redirectUri;
+    }
+  } catch {
+    // Backward compatibility for legacy state values that were encoded as a raw redirect URI.
+  }
+
+  return decoded;
+}
+
 export type SessionPayload = {
   openId: string;
   appId: string;
@@ -39,8 +54,7 @@ class OAuthService {
   }
 
   private decodeState(state: string): string {
-    const redirectUri = atob(state);
-    return redirectUri;
+    return getRedirectUriFromState(state);
   }
 
   async getTokenByCode(

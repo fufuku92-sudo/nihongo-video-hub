@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getSafeReturnPath } from "./_core/oauth";
+import { getRedirectUriFromState } from "./_core/sdk";
 
 function encodeState(value: unknown) {
   return Buffer.from(JSON.stringify(value), "utf8").toString("base64");
@@ -13,6 +14,15 @@ describe("OAuth return path handling", () => {
     });
 
     expect(getSafeReturnPath(state)).toBe("/admin");
+  });
+
+  it("extracts redirectUri from JSON state for OAuth token exchange", () => {
+    const state = encodeState({
+      redirectUri: "https://example.test/api/oauth/callback",
+      returnPath: "/admin",
+    });
+
+    expect(getRedirectUriFromState(state)).toBe("https://example.test/api/oauth/callback");
   });
 
   it("falls back to home for external, protocol-relative, malformed, or missing paths", () => {
