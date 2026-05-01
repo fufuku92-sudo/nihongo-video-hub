@@ -7,7 +7,8 @@ import { HOME_MOTION } from "@/lib/homeMotion";
 import { HOME_SEO, applySeoMetadata } from "@/lib/seo";
 import { STUDY_MODE_OPTIONS, type StudyMode } from "@/lib/studyNavigation";
 import { trpc } from "@/lib/trpc";
-import { BookOpen, ExternalLink, Headphones, Map, Music2, PlayCircle, Search, ShieldCheck, Train, Video } from "lucide-react";
+import { BookOpen, ExternalLink, Headphones, Map, Music2, PlayCircle, Search, ShieldCheck, Train, Video, Mic2 } from "lucide-react";
+import { seedPodcasts, getPodcastsByLevel, getAllCategories, type PodcastLevel } from "@/lib/podcastData";
 
 /**
  * Design Reminder — 昭和現代主義與日本公共資訊設計：
@@ -127,6 +128,8 @@ export default function Home() {
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [activeSongArtist, setActiveSongArtist] = useState(ALL_SONG_ARTISTS);
   const [activeSongLevel, setActiveSongLevel] = useState<SongFilterLevel>(ALL_SONG_LEVELS);
+  const [activePodcastLevel, setActivePodcastLevel] = useState<PodcastLevel>("all");
+  const [selectedPodcastId, setSelectedPodcastId] = useState<string | null>(null);
   const totalViews = analyticsStats?.totalViews ?? recordPageView.data?.totalViews ?? 0;
 
   useEffect(() => {
@@ -628,6 +631,125 @@ export default function Home() {
           })}
         </div>
       </nav>
-    </main>
+    
+      {activeStudyMode === "podcasts" ? (
+      <section key="podcasts-tab-panel" id="podcasts" className={`relative border-y border-[#21392f]/15 bg-[#fff8e9] px-5 py-16 md:px-10 lg:px-16 ${HOME_MOTION.songTabPanel}`}>
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
+            <div>
+              <p className="mb-3 text-sm font-black uppercase tracking-[0.32em] text-[#b7442e]">Podcast Learning</p>
+              <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">推薦日文 Podcast</h2>
+            </div>
+            <p className="max-w-3xl text-base leading-7 text-[#314a40]">
+              選一個 Podcast 頻道，透過沉浸式聽力練習與日本文化深入學習日文。
+            </p>
+          </div>
+
+          <div className="mb-8 border-2 border-[#21392f] bg-[#fff7e6] p-4 shadow-[7px_7px_0_#24628f] lg:hidden">
+            <p className="mb-4 text-sm font-black tracking-[0.18em] text-[#b7442e]">快速篩選 Podcast</p>
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#314a40]/80">JLPT 難度</span>
+              <select
+                value={activePodcastLevel}
+                onChange={(event) => setActivePodcastLevel(event.target.value as PodcastLevel)}
+                className="h-12 w-full rounded-none border-2 border-[#21392f]/30 bg-[#f8f0de] px-4 text-base font-black text-[#21392f] outline-none focus:border-[#b7442e]"
+              >
+                <option value="all">全部難度</option>
+                <option value="N5">N5 初級</option>
+                <option value="N4">N4 基礎</option>
+                <option value="N3">N3 中級</option>
+                <option value="N2">N2 中高級</option>
+                <option value="N1">N1 高級</option>
+              </select>
+            </label>
+            <p className="mt-4 border-t border-[#21392f]/15 pt-3 text-sm font-bold text-[#314a40]">目前顯示 {activePodcastLevel === "all" ? "全部難度" : activePodcastLevel}，共 {filteredPodcasts.length} 個 Podcast。</p>
+          </div>
+
+          <div className="grid gap-10 lg:grid-cols-[320px_1fr]">
+            <aside className="relative hidden lg:block">
+              <div className="sticky top-6 space-y-3">
+                {["all", "N5", "N4", "N3", "N2", "N1"].map((level) => {
+                  const levelCount = level === "all" ? podcasts.length : podcasts.filter((p) => p.level === level).length;
+                  return (
+                    <button
+                      key={level}
+                      onClick={() => setActivePodcastLevel(level as PodcastLevel)}
+                      className={`group w-full border-2 px-4 py-4 text-left transition duration-200 ${activePodcastLevel === level ? "translate-x-2 border-[#21392f] bg-[#f8f0de] shadow-[7px_7px_0_#21392f]" : "border-[#21392f]/25 bg-[#fff8e9]/70 hover:translate-x-1 hover:border-[#21392f]/70"}`}
+                    >
+                      <span className="block text-lg font-black tracking-wide">{level === "all" ? "全部難度" : level}</span>
+                      <span className="mt-2 inline-flex border border-[#21392f]/20 px-2 py-0.5 text-xs font-bold">{levelCount} 個</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
+
+            <div className="space-y-8">
+              <div className={`grid gap-5 rounded-none border-2 border-[#21392f] bg-[#fff7e6] p-4 shadow-[10px_10px_0_#24628f] lg:grid-cols-[1.1fr_0.9fr] ${HOME_MOTION.videoPanel}`}>
+                <div className="aspect-video overflow-hidden border border-[#21392f]/30 bg-[#21392f] flex items-center justify-center">
+                  <div className="text-center">
+                    <Mic2 className="h-16 w-16 mx-auto text-[#fff7e6] mb-4" />
+                    <p className="text-sm font-bold text-[#fff7e6]">{selectedPodcast?.title}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col justify-between p-2">
+                  <div>
+                    <div className="mb-4 inline-flex items-center gap-2 bg-[#24628f] px-3 py-1 text-sm font-black text-[#fff7e6]">
+                      {selectedPodcast?.level}｜{selectedPodcast?.platform}
+                    </div>
+                    <h3 className="font-serif text-2xl font-black leading-tight text-[#21392f] md:text-3xl">{selectedPodcast?.title}</h3>
+                    <p className="mt-4 text-sm font-bold uppercase tracking-[0.18em] text-[#24628f]">主持人：{selectedPodcast?.host}</p>
+                    <p className="mt-4 text-base leading-7 text-[#314a40]">{selectedPodcast?.description}</p>
+                    {selectedPodcast?.episodeCount && (
+                      <p className="mt-2 text-sm text-[#314a40]">📊 {selectedPodcast.episodeCount} 集｜{selectedPodcast.updateFrequency}</p>
+                    )}
+                  </div>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {selectedPodcast?.platformUrl ? (
+                      <a href={selectedPodcast.platformUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#24628f] bg-[#24628f] px-4 py-2 text-sm font-bold text-[#fff7e6] transition hover:-translate-y-0.5">
+                        前往 {selectedPodcast.platform} <ExternalLink className="h-4 w-4" />
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className={`grid gap-4 md:grid-cols-2 xl:grid-cols-3 ${HOME_MOTION.videoGrid}`}>
+                {filteredPodcasts.map((podcast) => (
+                  <article
+                    key={podcast.id}
+                    className={`group flex min-h-[250px] flex-col border-2 bg-[#fff8e9] p-5 text-left transition duration-200 ${selectedPodcast?.id === podcast.id ? "border-[#24628f] shadow-[7px_7px_0_#24628f]" : "border-[#21392f]/20 hover:-translate-y-1 hover:border-[#21392f] hover:shadow-[7px_7px_0_#21392f]"}`}
+                  >
+                    <button type="button" onClick={() => setSelectedPodcastId(podcast.id)} className="flex flex-1 flex-col text-left">
+                      <div className="mb-5 flex items-center justify-between gap-3">
+                        <span className="inline-flex items-center gap-2 bg-[#24628f] px-3 py-1 text-sm font-black text-[#fff7e6]">
+                          <Mic2 className="h-4 w-4" /> {podcast.level}｜{podcast.category}
+                        </span>
+                        <PlayCircle className="h-7 w-7 text-[#b7442e] transition group-hover:scale-110" />
+                      </div>
+                      <h4 className="font-serif text-xl font-black leading-snug text-[#21392f]">{podcast.title}</h4>
+                      <p className="mt-3 text-sm font-bold text-[#24628f]">{podcast.host}</p>
+                      <p className="mt-4 text-sm leading-6 text-[#314a40]">{podcast.description}</p>
+                    </button>
+                    <div className="mt-5 flex flex-wrap gap-2 border-t border-[#21392f]/15 pt-4">
+                      <button type="button" onClick={() => setSelectedPodcastId(podcast.id)} className="inline-flex items-center gap-2 border border-[#24628f] bg-[#24628f] px-3 py-2 text-xs font-black text-[#fff7e6] transition hover:-translate-y-0.5">
+                        選擇 <PlayCircle className="h-3.5 w-3.5" />
+                      </button>
+                      {podcast.platformUrl ? (
+                        <a href={podcast.platformUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#24628f] bg-[#f8f0de] px-3 py-2 text-xs font-black text-[#24628f] transition hover:-translate-y-0.5 hover:bg-[#24628f] hover:text-[#fff7e6]">
+                          前往 {podcast.platform} <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      ) : null}
+
+</main>
   );
 }

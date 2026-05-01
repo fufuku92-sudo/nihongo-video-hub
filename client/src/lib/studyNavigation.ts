@@ -1,10 +1,10 @@
-export type StudyMode = "videos" | "songs";
+export type StudyMode = "videos" | "songs" | "podcasts";
 
 export type StudyModeOption = {
   value: StudyMode;
   label: string;
   description: string;
-  accent: "ink" | "vermilion";
+  accent: "ink" | "vermilion" | "blue";
 };
 
 export const STUDY_MODE_OPTIONS: StudyModeOption[] = [
@@ -19,6 +19,12 @@ export const STUDY_MODE_OPTIONS: StudyModeOption[] = [
     label: "日文歌曲",
     description: "用歌曲練聽力、單字與語感。",
     accent: "vermilion",
+  },
+  {
+    value: "podcasts",
+    label: "推薦 Podcast",
+    description: "沉浸式聽力練習與日文學習頻道。",
+    accent: "blue",
   },
 ];
 
