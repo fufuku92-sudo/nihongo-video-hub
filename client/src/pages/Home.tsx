@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ALL_SONG_ARTISTS, ALL_SONG_LEVELS, filterSongs, getSongArtists, type SongFilterLevel } from "@/lib/songFilters";
 import { trpc } from "@/lib/trpc";
 import { BookOpen, ExternalLink, Headphones, Map, Music2, PlayCircle, Search, ShieldCheck, Train, Video } from "lucide-react";
 
@@ -107,6 +108,8 @@ export default function Home() {
   const [activeTopic, setActiveTopic] = useState<"全部" | Topic>("全部");
   const [selectedVideoId, setSelectedVideoId] = useState(seedVideos[0].id);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+  const [activeSongArtist, setActiveSongArtist] = useState(ALL_SONG_ARTISTS);
+  const [activeSongLevel, setActiveSongLevel] = useState<SongFilterLevel>(ALL_SONG_LEVELS);
 
   const customVideos = useMemo<VideoItem[]>(() => {
     return databaseVideos.map((video) => ({
@@ -142,7 +145,11 @@ export default function Home() {
     }));
   }, [databaseSongs]);
 
-  const selectedSong = songs.find((song) => song.id === selectedSongId) ?? songs[0];
+  const songArtists = useMemo(() => getSongArtists(songs), [songs]);
+
+  const filteredSongs = useMemo(() => filterSongs(songs, activeSongArtist, activeSongLevel), [activeSongArtist, activeSongLevel, songs]);
+
+  const selectedSong = filteredSongs.find((song) => song.id === selectedSongId) ?? filteredSongs[0];
 
   useEffect(() => {
     if (!videos.some((video) => video.id === selectedVideoId)) {
@@ -151,15 +158,15 @@ export default function Home() {
   }, [activeLevel, activeTopic, selectedVideoId, videos]);
 
   useEffect(() => {
-    if (songs.length === 0) {
+    if (filteredSongs.length === 0) {
       setSelectedSongId(null);
       return;
     }
 
-    if (!selectedSongId || !songs.some((song) => song.id === selectedSongId)) {
-      setSelectedSongId(songs[0].id);
+    if (!selectedSongId || !filteredSongs.some((song) => song.id === selectedSongId)) {
+      setSelectedSongId(filteredSongs[0].id);
     }
-  }, [selectedSongId, songs]);
+  }, [filteredSongs, selectedSongId]);
 
   const countsByLevel = useMemo(() => {
     return levels.reduce<Record<Level, number>>((acc, item) => {
@@ -371,11 +378,65 @@ export default function Home() {
             </p>
           </div>
 
+          {songs.length > 0 ? (
+            <div className="mb-8 border-2 border-[#f4ecd8]/30 bg-[#fff8e9]/10 p-5 shadow-[8px_8px_0_#24628f]">
+              <div className="grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-black tracking-[0.18em] text-[#f1b35b]">依歌手篩選</span>
+                  <select
+                    value={activeSongArtist}
+                    onChange={(event) => setActiveSongArtist(event.target.value)}
+                    className="h-12 w-full rounded-none border-2 border-[#f4ecd8]/45 bg-[#f8f0de] px-4 text-sm font-bold text-[#21392f] outline-none transition focus:border-[#f1b35b]"
+                  >
+                    <option value={ALL_SONG_ARTISTS}>全部歌手</option>
+                    {songArtists.map((artist) => (
+                      <option key={artist} value={artist}>{artist}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-black tracking-[0.18em] text-[#f1b35b]">依難度篩選</span>
+                  <select
+                    value={activeSongLevel}
+                    onChange={(event) => setActiveSongLevel(event.target.value as SongFilterLevel)}
+                    className="h-12 w-full rounded-none border-2 border-[#f4ecd8]/45 bg-[#f8f0de] px-4 text-sm font-bold text-[#21392f] outline-none transition focus:border-[#f1b35b]"
+                  >
+                    <option value={ALL_SONG_LEVELS}>全部難度</option>
+                    {levels.map((item) => (
+                      <option key={item.level} value={item.level}>{item.level}｜{item.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                  <span className="inline-flex h-12 items-center justify-center border border-[#f4ecd8]/40 px-4 text-sm font-black text-[#fff7e6]">
+                    顯示 {filteredSongs.length} / {songs.length} 首
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSongArtist(ALL_SONG_ARTISTS);
+                      setActiveSongLevel(ALL_SONG_LEVELS);
+                    }}
+                    className="h-12 border border-[#f1b35b] bg-[#f8f0de] px-4 text-sm font-black text-[#21392f] transition hover:-translate-y-0.5 hover:bg-[#f1b35b]"
+                  >
+                    重設篩選
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {songs.length === 0 ? (
             <div className="border-2 border-[#f4ecd8]/30 bg-[#f8f0de] p-8 text-[#21392f] shadow-[10px_10px_0_#b7442e]">
               <Music2 className="mb-4 h-9 w-9 text-[#b7442e]" />
               <h3 className="font-serif text-3xl font-black">目前還沒有新增歌曲。</h3>
               <p className="mt-4 max-w-2xl text-base leading-7 text-[#314a40]">管理員可以到後台新增 YouTube 歌曲連結、歌手、官方歌詞來源與學習重點。新增後會自動出現在這個區塊。</p>
+            </div>
+          ) : filteredSongs.length === 0 ? (
+            <div className="border-2 border-[#f4ecd8]/30 bg-[#f8f0de] p-8 text-[#21392f] shadow-[10px_10px_0_#b7442e]">
+              <Search className="mb-4 h-9 w-9 text-[#24628f]" />
+              <h3 className="font-serif text-3xl font-black">沒有符合篩選條件的歌曲。</h3>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-[#314a40]">請改選其他歌手或難度，或按「重設篩選」回到完整歌曲清單。</p>
             </div>
           ) : selectedSong ? (
             <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
@@ -412,9 +473,9 @@ export default function Home() {
             </div>
           ) : null}
 
-          {songs.length > 0 ? (
+          {filteredSongs.length > 0 ? (
             <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {songs.map((song) => (
+              {filteredSongs.map((song) => (
                 <button key={song.id} type="button" onClick={() => setSelectedSongId(song.id)} className={`border-2 p-5 text-left transition ${selectedSong?.id === song.id ? "border-[#f1b35b] bg-[#f8f0de] text-[#21392f] shadow-[7px_7px_0_#f1b35b]" : "border-[#f4ecd8]/25 bg-[#fff8e9]/10 text-[#fff7e6] hover:-translate-y-1 hover:border-[#f4ecd8]"}`}>
                   <span className="inline-flex items-center gap-2 bg-[#b7442e] px-3 py-1 text-sm font-black text-[#fff7e6]"><Music2 className="h-4 w-4" /> {song.level}</span>
                   <h4 className="mt-4 font-serif text-xl font-black leading-snug">{song.title}</h4>
