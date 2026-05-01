@@ -170,7 +170,8 @@ export default function Home() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(emptyForm);
-  const [formMessage, setFormMessage] = useState("請以管理員帳號登入後新增、編輯或刪除自訂影片。資料會同步到資料庫。");
+  const [formMessage, setFormMessage] = useState("站務登入後即可維護資料庫影片，變更會同步保存。");
+  const [showOpsPanel, setShowOpsPanel] = useState(false);
 
   const customVideos = useMemo<VideoItem[]>(() => {
     return databaseVideos.map((video) => ({
@@ -219,6 +220,11 @@ export default function Home() {
     setActiveTopic(topic);
     const first = videos.find((video) => video.level === activeLevel && (topic === "全部" || video.topic === topic));
     if (first) setSelectedVideoId(first.id);
+  }
+
+  function revealOpsPanel() {
+    setShowOpsPanel(true);
+    window.setTimeout(() => document.getElementById("station-office")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
   }
 
   function handleLogin() {
@@ -323,7 +329,6 @@ export default function Home() {
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <a href="#catalog" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#21392f] transition hover:-translate-y-0.5">影片月台</a>
-            <a href="#manage" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#24628f] transition hover:-translate-y-0.5">管理員入口</a>
           </div>
         </nav>
 
@@ -337,7 +342,7 @@ export default function Home() {
               從 N5 到 N1，沿著日語學習路線前進。
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-[#314a40] md:text-xl">
-              這裡把日文學習影片依 JLPT 級別與主題整理成路線圖。一般使用者可以瀏覽與篩選影片；新增與刪除影片則限定管理員操作。
+              這裡把日文學習影片依 JLPT 級別與主題整理成路線圖。你可以依程度與學習目標瀏覽、篩選並開啟適合的影片。
             </p>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <a href="#catalog">
@@ -345,8 +350,8 @@ export default function Home() {
                   開始查詢路線
                 </Button>
               </a>
-              <a href="#manage" className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
-                管理員新增影片
+              <a href="#catalog" className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
+                查看影片清單
               </a>
             </div>
           </div>
@@ -361,7 +366,7 @@ export default function Home() {
               <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">選擇你的 JLPT 月台</h2>
             </div>
             <p className="max-w-3xl text-base leading-7 text-[#314a40]">
-              目前預設收錄 {seedVideos.length} 支影片。管理員新增的影片會與預設影片合併顯示，一般訪客只會看到整理好的學習清單。
+              目前預設收錄 {seedVideos.length} 支影片。站方維護的補充影片會與預設影片合併顯示，讓學習清單持續保持可用。
             </p>
           </div>
 
@@ -455,13 +460,14 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="manage" className="border-y border-[#21392f]/15 bg-[#21392f] px-5 py-16 text-[#fff7e6] md:px-10 lg:px-16">
+      {(showOpsPanel || isAuthenticated) && (
+      <section id="station-office" className="border-y border-[#21392f]/15 bg-[#21392f] px-5 py-16 text-[#fff7e6] md:px-10 lg:px-16">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div>
-            <p className="mb-3 text-sm font-black uppercase tracking-[0.32em] text-[#e6b14a]">Video Manager</p>
-            <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-5xl">管理員新增影片。</h2>
+            <p className="mb-3 text-sm font-black uppercase tracking-[0.32em] text-[#e6b14a]">Station Office</p>
+            <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-5xl">站務資料維護。</h2>
             <p className="mt-5 max-w-xl text-base leading-8 text-[#fff7e6]/80">
-              這個區塊已改成管理員入口。一般訪客只能瀏覽影片；管理員解鎖後，才可以貼上 YouTube 連結、選擇 N5 到 N1 與主題，並把影片加入清單。
+              此區塊僅供站務維護使用；未登入時不會在首頁主視覺或主要導覽中顯示，登入後才會依帳號角色開放資料維護功能。
             </p>
             <img src={ticketImage} alt="JLPT 分級票券插畫" className="mt-8 hidden w-full border border-[#fff7e6]/20 shadow-[12px_12px_0_#b7442e] lg:block" />
           </div>
@@ -474,13 +480,13 @@ export default function Home() {
                     <Lock className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-serif text-2xl font-black">管理員登入後台</h3>
-                    <p className="mt-2 text-sm leading-6 text-[#314a40]">一般訪客可以瀏覽影片。若要新增或刪除自訂影片，請先登入具有管理員角色的帳號。</p>
+                    <h3 className="font-serif text-2xl font-black">站務登入</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#314a40]">此入口提供內容維護使用。若需要維護資料，請登入具備相應權限的帳號。</p>
                   </div>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <Button type="button" onClick={handleLogin} className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
-                    <Lock className="mr-2 h-4 w-4" /> 登入管理員帳號
+                    <Lock className="mr-2 h-4 w-4" /> 登入站務帳號
                   </Button>
                   <p className="text-sm font-semibold text-[#314a40]">{authLoading ? "正在確認登入狀態……" : "登入後系統會依帳號角色開放管理功能。"}</p>
                 </div>
@@ -503,7 +509,7 @@ export default function Home() {
             ) : (
               <>
                 <div className="mb-6 flex flex-col gap-3 border border-[#2f5d46]/30 bg-[#fff8e9] p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm font-black text-[#2f5d46]">管理員模式使用中：{user?.name || "管理員"} 可以新增與刪除資料庫影片。</p>
+                  <p className="text-sm font-black text-[#2f5d46]">站務模式使用中：{user?.name || "管理員"} 可以新增、編輯與刪除資料庫影片。</p>
                   <button onClick={handleLogout} className="inline-flex items-center justify-center gap-2 border border-[#21392f]/30 px-3 py-2 text-sm font-black transition hover:bg-[#21392f] hover:text-[#fff7e6]">
                     <LogOut className="h-4 w-4" /> 登出
                   </button>
@@ -549,7 +555,7 @@ export default function Home() {
                 </form>
 
                 <div className="mt-8 border-t border-[#21392f]/20 pt-6">
-                  <h3 className="mb-4 font-serif text-2xl font-black">管理員新增的影片</h3>
+                  <h3 className="mb-4 font-serif text-2xl font-black">站務維護的影片</h3>
                   {videosLoading ? (
                     <p className="border border-[#21392f]/20 bg-[#fff8e9] p-4 text-sm font-semibold text-[#314a40]">正在載入資料庫影片……</p>
                   ) : customVideos.length === 0 ? (
@@ -615,10 +621,16 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       <footer className="px-5 py-8 text-sm leading-6 text-[#314a40] md:px-10 lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-[#21392f]/15 pt-6 md:flex-row md:items-center md:justify-between">
-          <p className="font-bold">Nihongo Video Hub｜目前共 {videos.length} 支影片，包含 {customVideos.length} 支自訂影片。</p>
+          <div className="flex flex-col gap-2">
+            <p className="font-bold">Nihongo Video Hub｜目前共 {videos.length} 支影片，包含 {customVideos.length} 支補充影片。</p>
+            <button type="button" onClick={revealOpsPanel} className="w-fit text-left text-xs font-semibold tracking-[0.18em] text-[#314a40]/45 underline-offset-4 transition hover:text-[#314a40] hover:underline" aria-label="開啟站務入口">
+              站務
+            </button>
+          </div>
           <p className="max-w-2xl text-[#314a40]/75">
             小提醒：本站以學習索引方式嵌入公開 YouTube 影片，不下載或重新上傳；若影片作者移除或關閉嵌入，播放結果會依 YouTube 設定為準。
           </p>
