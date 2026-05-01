@@ -170,7 +170,7 @@ export default function Home() {
               從 N5 到 N1，沿著日語學習路線前進。
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-[#314a40] md:text-xl">
-              這裡把日文學習影片依 JLPT 級別與主題整理成路線圖。你可以依程度與學習目標瀏覽、篩選並開啟適合的影片。
+              這裡整理多個 YouTube 頻道提供的優質日文學習影片，依 JLPT 級別與主題做成免費學習路線圖。本站以非營利方式協助學習者快速找到適合內容，並將流量導回原影片與原作者。
             </p>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <a href="#catalog">
@@ -194,7 +194,7 @@ export default function Home() {
               <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">選擇你的 JLPT 月台</h2>
             </div>
             <p className="max-w-3xl text-base leading-7 text-[#314a40]">
-              目前預設收錄 {seedVideos.length} 支影片。站方維護的補充影片會與預設影片合併顯示，讓學習清單持續保持可用。
+              這份清單會持續整理與補充公開 YouTube 學習資源。所有影片皆保留原頻道名稱與 YouTube 連結，本站只做分類、索引與學習導覽，方便大家免費學習。
             </p>
           </div>
 
@@ -292,10 +292,10 @@ export default function Home() {
       <footer className="px-5 py-8 text-sm leading-6 text-[#314a40] md:px-10 lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-[#21392f]/15 pt-6 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-2">
-            <p className="font-bold">Nihongo Video Hub｜目前共 {videos.length} 支影片，包含 {customVideos.length} 支補充影片。</p>
+            <p className="font-bold">Nihongo Video Hub｜免費、非營利的 YouTube 日文學習影片整合平台。</p>
           </div>
           <p className="max-w-2xl text-[#314a40]/75">
-            小提醒：本站以學習索引方式嵌入公開 YouTube 影片，不下載或重新上傳；若影片作者移除或關閉嵌入，播放結果會依 YouTube 設定為準。
+            感謝各 YouTube 頻道與創作者提供公開且實用的日文學習資源。本站不下載、不重新上傳，也不販售內容；僅整理影片資訊並導向原頁觀看，希望協助學習者找到好內容，同時增加原創作者的曝光。
           </p>
         </div>
       </footer>
