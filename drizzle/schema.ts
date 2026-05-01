@@ -37,7 +37,30 @@ export const videos = mysqlTable("videos", {
     .references(() => users.id),
 });
 
+export const songs = mysqlTable("songs", {
+  id: int("id").autoincrement().primaryKey(),
+  youtubeId: varchar("youtubeId", { length: 32 }).notNull().unique(),
+  title: text("title").notNull(),
+  artist: text("artist").notNull(),
+  channel: text("channel").notNull(),
+  channelUrl: text("channelUrl"),
+  level: mysqlEnum("songLevel", ["N5", "N4", "N3", "N2", "N1"]).notNull(),
+  mood: varchar("mood", { length: 80 }).default("日文歌").notNull(),
+  reason: text("reason"),
+  lyricsUrl: text("lyricsUrl"),
+  lyricsNote: text("lyricsNote"),
+  vocabularyNotes: text("vocabularyNotes"),
+  grammarNotes: text("grammarNotes"),
+  listeningPrompt: text("listeningPrompt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdByUserId: int("createdByUserId")
+    .notNull()
+    .references(() => users.id),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Video = typeof videos.$inferSelect;
 export type InsertVideo = typeof videos.$inferInsert;
+export type Song = typeof songs.$inferSelect;
+export type InsertSong = typeof songs.$inferInsert;

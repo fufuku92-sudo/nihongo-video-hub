@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, InsertVideo, users, videos } from "../drizzle/schema";
+import { InsertSong, InsertUser, InsertVideo, songs, users, videos } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -165,5 +165,111 @@ export async function deleteVideoByYoutubeId(youtubeId: string) {
   }
 
   await db.delete(videos).where(eq(videos.youtubeId, youtubeId));
+  return { success: true } as const;
+}
+
+export async function listSongs() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot list songs: database not available");
+    return [];
+  }
+
+  return db.select().from(songs).orderBy(desc(songs.createdAt));
+}
+
+export async function getSongByYoutubeId(youtubeId: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get song: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(songs).where(eq(songs.youtubeId, youtubeId)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertSong(song: InsertSong) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database is not available");
+  }
+
+  await db
+    .insert(songs)
+    .values(song)
+    .onDuplicateKeyUpdate({
+      set: {
+        title: song.title,
+        artist: song.artist,
+        channel: song.channel,
+        channelUrl: song.channelUrl ?? null,
+        level: song.level,
+        mood: song.mood,
+        reason: song.reason ?? null,
+        lyricsUrl: song.lyricsUrl ?? null,
+        lyricsNote: song.lyricsNote ?? null,
+        vocabularyNotes: song.vocabularyNotes ?? null,
+        grammarNotes: song.grammarNotes ?? null,
+        listeningPrompt: song.listeningPrompt ?? null,
+        createdByUserId: song.createdByUserId,
+      },
+    });
+
+  return getSongByYoutubeId(song.youtubeId);
+}
+
+export async function updateSongByYoutubeId(
+  youtubeId: string,
+  updates: Pick<
+    InsertSong,
+    | "title"
+    | "artist"
+    | "channel"
+    | "channelUrl"
+    | "level"
+    | "mood"
+    | "reason"
+    | "lyricsUrl"
+    | "lyricsNote"
+    | "vocabularyNotes"
+    | "grammarNotes"
+    | "listeningPrompt"
+  >,
+) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database is not available");
+  }
+
+  await db
+    .update(songs)
+    .set({
+      title: updates.title,
+      artist: updates.artist,
+      channel: updates.channel,
+      channelUrl: updates.channelUrl ?? null,
+      level: updates.level,
+      mood: updates.mood,
+      reason: updates.reason ?? null,
+      lyricsUrl: updates.lyricsUrl ?? null,
+      lyricsNote: updates.lyricsNote ?? null,
+      vocabularyNotes: updates.vocabularyNotes ?? null,
+      grammarNotes: updates.grammarNotes ?? null,
+      listeningPrompt: updates.listeningPrompt ?? null,
+    })
+    .where(eq(songs.youtubeId, youtubeId));
+
+  return getSongByYoutubeId(youtubeId);
+}
+
+export async function deleteSongByYoutubeId(youtubeId: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database is not available");
+  }
+
+  await db.delete(songs).where(eq(songs.youtubeId, youtubeId));
   return { success: true } as const;
 }

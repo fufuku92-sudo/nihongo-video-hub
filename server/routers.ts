@@ -20,6 +20,11 @@ const optionalChannelUrlSchema = z.preprocess(
   z.string().trim().url("請填寫有效的頻道網址").max(500, "頻道網址過長").optional(),
 );
 
+const optionalLyricsUrlSchema = z.preprocess(
+  value => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().url("請填寫有效的歌詞或官方資訊網址").max(500, "歌詞來源網址過長").optional(),
+);
+
 const editableVideoFieldsSchema = z.object({
   title: z.string().trim().min(1, "請填寫影片標題").max(300, "影片標題過長"),
   channel: z.string().trim().min(1, "請填寫頻道名稱").max(200, "頻道名稱過長"),
@@ -34,6 +39,29 @@ const videoInputSchema = editableVideoFieldsSchema.extend({
 });
 
 const videoUpdateSchema = editableVideoFieldsSchema.extend({
+  youtubeId: youtubeIdSchema,
+});
+
+const editableSongFieldsSchema = z.object({
+  title: z.string().trim().min(1, "請填寫歌曲名稱").max(300, "歌曲名稱過長"),
+  artist: z.string().trim().min(1, "請填寫歌手或作品名稱").max(200, "歌手名稱過長"),
+  channel: z.string().trim().min(1, "請填寫頻道名稱").max(200, "頻道名稱過長"),
+  channelUrl: optionalChannelUrlSchema,
+  level: levelSchema,
+  mood: z.string().trim().min(1, "請填寫歌曲分類或氛圍").max(80, "分類文字過長"),
+  reason: z.string().trim().max(800, "推薦理由過長").optional(),
+  lyricsUrl: optionalLyricsUrlSchema,
+  lyricsNote: z.string().trim().max(1200, "歌詞備註過長").optional(),
+  vocabularyNotes: z.string().trim().max(1600, "單字重點過長").optional(),
+  grammarNotes: z.string().trim().max(1600, "文法重點過長").optional(),
+  listeningPrompt: z.string().trim().max(1000, "聽力提示過長").optional(),
+});
+
+const songInputSchema = editableSongFieldsSchema.extend({
+  youtubeId: youtubeIdSchema,
+});
+
+const songUpdateSchema = editableSongFieldsSchema.extend({
   youtubeId: youtubeIdSchema,
 });
 
@@ -80,6 +108,50 @@ export const appRouter = router({
         }),
       )
       .mutation(({ input }) => db.deleteVideoByYoutubeId(input.youtubeId)),
+  }),
+  songs: router({
+    list: publicProcedure.query(() => db.listSongs()),
+    add: adminProcedure.input(songInputSchema).mutation(({ ctx, input }) =>
+      db.upsertSong({
+        youtubeId: input.youtubeId,
+        title: input.title,
+        artist: input.artist,
+        channel: input.channel,
+        channelUrl: input.channelUrl || null,
+        level: input.level,
+        mood: input.mood,
+        reason: input.reason || null,
+        lyricsUrl: input.lyricsUrl || null,
+        lyricsNote: input.lyricsNote || null,
+        vocabularyNotes: input.vocabularyNotes || null,
+        grammarNotes: input.grammarNotes || null,
+        listeningPrompt: input.listeningPrompt || null,
+        createdByUserId: ctx.user.id,
+      }),
+    ),
+    update: adminProcedure.input(songUpdateSchema).mutation(({ input }) =>
+      db.updateSongByYoutubeId(input.youtubeId, {
+        title: input.title,
+        artist: input.artist,
+        channel: input.channel,
+        channelUrl: input.channelUrl || null,
+        level: input.level,
+        mood: input.mood,
+        reason: input.reason || null,
+        lyricsUrl: input.lyricsUrl || null,
+        lyricsNote: input.lyricsNote || null,
+        vocabularyNotes: input.vocabularyNotes || null,
+        grammarNotes: input.grammarNotes || null,
+        listeningPrompt: input.listeningPrompt || null,
+      }),
+    ),
+    delete: adminProcedure
+      .input(
+        z.object({
+          youtubeId: youtubeIdSchema,
+        }),
+      )
+      .mutation(({ input }) => db.deleteSongByYoutubeId(input.youtubeId)),
   }),
 });
 

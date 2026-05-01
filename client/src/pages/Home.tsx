@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { BookOpen, ExternalLink, Headphones, Map, PlayCircle, Search, ShieldCheck, Train, Video } from "lucide-react";
+import { BookOpen, ExternalLink, Headphones, Map, Music2, PlayCircle, Search, ShieldCheck, Train, Video } from "lucide-react";
 
 /**
  * Design Reminder — 昭和現代主義與日本公共資訊設計：
@@ -24,6 +24,22 @@ type VideoItem = {
   reason: string;
   confidence: "高" | "中" | "自訂";
   custom?: boolean;
+};
+
+type SongItem = {
+  id: string;
+  title: string;
+  artist: string;
+  channel: string;
+  channelUrl?: string | null;
+  level: Level;
+  mood: string;
+  reason: string;
+  lyricsUrl?: string | null;
+  lyricsNote: string;
+  vocabularyNotes: string;
+  grammarNotes: string;
+  listeningPrompt: string;
 };
 
 const heroImage = "https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_hero_station_map-i92c2aVR2pcivx8nJA773U.webp";
@@ -85,10 +101,12 @@ function filteredVideoFallback(videos: VideoItem[], activeLevel: Level, activeTo
 
 export default function Home() {
   const { data: databaseVideos = [] } = trpc.videos.list.useQuery();
+  const { data: databaseSongs = [] } = trpc.songs.list.useQuery();
 
   const [activeLevel, setActiveLevel] = useState<Level>("N5");
   const [activeTopic, setActiveTopic] = useState<"全部" | Topic>("全部");
   const [selectedVideoId, setSelectedVideoId] = useState(seedVideos[0].id);
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
 
   const customVideos = useMemo<VideoItem[]>(() => {
     return databaseVideos.map((video) => ({
@@ -106,11 +124,42 @@ export default function Home() {
 
   const videos = useMemo(() => [...customVideos, ...seedVideos], [customVideos]);
 
+  const songs = useMemo<SongItem[]>(() => {
+    return databaseSongs.map((song) => ({
+      id: song.youtubeId,
+      title: song.title,
+      artist: song.artist,
+      channel: song.channel,
+      channelUrl: song.channelUrl,
+      level: song.level as Level,
+      mood: song.mood || "日文歌",
+      reason: song.reason || "由內容維護新增的日文歌曲。",
+      lyricsUrl: song.lyricsUrl,
+      lyricsNote: song.lyricsNote || "請參考官方或授權歌詞來源搭配學習。",
+      vocabularyNotes: song.vocabularyNotes || "可補充常見單字、片假名或慣用語。",
+      grammarNotes: song.grammarNotes || "可補充句型、助詞或口語表現。",
+      listeningPrompt: song.listeningPrompt || "先聽副歌，再回到整首歌練習辨音與跟唱。",
+    }));
+  }, [databaseSongs]);
+
+  const selectedSong = songs.find((song) => song.id === selectedSongId) ?? songs[0];
+
   useEffect(() => {
     if (!videos.some((video) => video.id === selectedVideoId)) {
       setSelectedVideoId(filteredVideoFallback(videos, activeLevel, activeTopic));
     }
   }, [activeLevel, activeTopic, selectedVideoId, videos]);
+
+  useEffect(() => {
+    if (songs.length === 0) {
+      setSelectedSongId(null);
+      return;
+    }
+
+    if (!selectedSongId || !songs.some((song) => song.id === selectedSongId)) {
+      setSelectedSongId(songs[0].id);
+    }
+  }, [selectedSongId, songs]);
 
   const countsByLevel = useMemo(() => {
     return levels.reduce<Record<Level, number>>((acc, item) => {
@@ -160,6 +209,7 @@ export default function Home() {
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <a href="#catalog" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#21392f] transition hover:-translate-y-0.5">影片月台</a>
+            <a href="#songs" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#b7442e] transition hover:-translate-y-0.5">日文歌曲</a>
           </div>
         </nav>
 
@@ -181,8 +231,8 @@ export default function Home() {
                   開始查詢路線
                 </Button>
               </a>
-              <a href="#catalog" className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
-                查看影片清單
+              <a href="#songs" className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
+                查看日文歌曲
               </a>
             </div>
           </div>
@@ -307,6 +357,75 @@ export default function Home() {
         </div>
       </section>
 
+
+      <section id="songs" className="relative border-y border-[#21392f]/15 bg-[#21392f] px-5 py-16 text-[#fff7e6] md:px-10 lg:px-16">
+        <div className="absolute inset-0 bg-[url('https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_paper_pattern-2qjVZvdvYrMsj2KwtsxgWV.webp')] bg-cover bg-center opacity-10" />
+        <div className="relative z-10 mx-auto max-w-7xl">
+          <div className="mb-10 grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
+            <div>
+              <p className="mb-3 text-sm font-black uppercase tracking-[0.32em] text-[#f1b35b]">Song Study</p>
+              <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">日文歌曲學習區</h2>
+            </div>
+            <p className="max-w-3xl text-base leading-7 text-[#f4ecd8]/85">
+              這裡可放你喜歡的日文歌，搭配官方或授權歌詞來源、單字重點、文法提示與聽力練習。本站不自動產生或重製商業歌曲完整歌詞，而是協助整理合規的學習導覽。
+            </p>
+          </div>
+
+          {songs.length === 0 ? (
+            <div className="border-2 border-[#f4ecd8]/30 bg-[#f8f0de] p-8 text-[#21392f] shadow-[10px_10px_0_#b7442e]">
+              <Music2 className="mb-4 h-9 w-9 text-[#b7442e]" />
+              <h3 className="font-serif text-3xl font-black">目前還沒有新增歌曲。</h3>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-[#314a40]">管理員可以到後台新增 YouTube 歌曲連結、歌手、官方歌詞來源與學習重點。新增後會自動出現在這個區塊。</p>
+            </div>
+          ) : selectedSong ? (
+            <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="border-2 border-[#f4ecd8] bg-[#fff7e6] p-4 text-[#21392f] shadow-[10px_10px_0_#b7442e]">
+                <div className="aspect-video overflow-hidden border border-[#21392f]/30 bg-[#21392f]">
+                  <iframe key={selectedSong.id} className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${selectedSong.id}`} title={selectedSong.title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+                </div>
+                <div className="mt-5">
+                  <div className="mb-4 inline-flex items-center gap-2 bg-[#b7442e] px-3 py-1 text-sm font-black text-[#fff7e6]">
+                    <Music2 className="h-4 w-4" /> {selectedSong.level}｜{selectedSong.mood}
+                  </div>
+                  <h3 className="font-serif text-3xl font-black leading-tight">{selectedSong.title}</h3>
+                  <p className="mt-2 text-sm font-bold uppercase tracking-[0.16em] text-[#24628f]">{selectedSong.artist}｜{selectedSong.channel}</p>
+                  <p className="mt-4 text-base leading-7 text-[#314a40]">{selectedSong.reason}</p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <a href={`https://www.youtube.com/watch?v=${selectedSong.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#21392f] bg-[#21392f] px-4 py-2 text-sm font-bold text-[#fff7e6] transition hover:-translate-y-0.5">到 YouTube 原頁 <ExternalLink className="h-4 w-4" /></a>
+                    {selectedSong.lyricsUrl ? <a href={selectedSong.lyricsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#24628f] bg-[#f8f0de] px-4 py-2 text-sm font-bold text-[#24628f] transition hover:-translate-y-0.5 hover:bg-[#24628f] hover:text-[#fff7e6]">官方／授權歌詞來源 <ExternalLink className="h-4 w-4" /></a> : null}
+                    {selectedSong.channelUrl ? <a href={selectedSong.channelUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#2f5d46] bg-[#f8f0de] px-4 py-2 text-sm font-bold text-[#2f5d46] transition hover:-translate-y-0.5 hover:bg-[#2f5d46] hover:text-[#fff7e6]">前往原頻道 <ExternalLink className="h-4 w-4" /></a> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="border border-[#f4ecd8]/30 bg-[#f8f0de] p-5 text-[#21392f] shadow-[6px_6px_0_#24628f]">
+                  <h4 className="font-serif text-2xl font-black">歌詞與版權備註</h4>
+                  <p className="mt-3 text-sm leading-6 text-[#314a40]">{selectedSong.lyricsNote}</p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+                  <div className="border border-[#f4ecd8]/30 bg-[#fff8e9] p-5 text-[#21392f]"><h4 className="font-black text-[#b7442e]">單字重點</h4><p className="mt-2 text-sm leading-6 text-[#314a40]">{selectedSong.vocabularyNotes}</p></div>
+                  <div className="border border-[#f4ecd8]/30 bg-[#fff8e9] p-5 text-[#21392f]"><h4 className="font-black text-[#b7442e]">文法重點</h4><p className="mt-2 text-sm leading-6 text-[#314a40]">{selectedSong.grammarNotes}</p></div>
+                  <div className="border border-[#f4ecd8]/30 bg-[#fff8e9] p-5 text-[#21392f]"><h4 className="font-black text-[#b7442e]">聽力練習</h4><p className="mt-2 text-sm leading-6 text-[#314a40]">{selectedSong.listeningPrompt}</p></div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {songs.length > 0 ? (
+            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {songs.map((song) => (
+                <button key={song.id} type="button" onClick={() => setSelectedSongId(song.id)} className={`border-2 p-5 text-left transition ${selectedSong?.id === song.id ? "border-[#f1b35b] bg-[#f8f0de] text-[#21392f] shadow-[7px_7px_0_#f1b35b]" : "border-[#f4ecd8]/25 bg-[#fff8e9]/10 text-[#fff7e6] hover:-translate-y-1 hover:border-[#f4ecd8]"}`}>
+                  <span className="inline-flex items-center gap-2 bg-[#b7442e] px-3 py-1 text-sm font-black text-[#fff7e6]"><Music2 className="h-4 w-4" /> {song.level}</span>
+                  <h4 className="mt-4 font-serif text-xl font-black leading-snug">{song.title}</h4>
+                  <p className={`mt-2 text-sm font-bold ${selectedSong?.id === song.id ? "text-[#24628f]" : "text-[#f4ecd8]/80"}`}>{song.artist}</p>
+                  <p className={`mt-3 text-sm leading-6 ${selectedSong?.id === song.id ? "text-[#314a40]" : "text-[#f4ecd8]/75"}`}>{song.reason}</p>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       <footer className="px-5 py-8 text-sm leading-6 text-[#314a40] md:px-10 lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-[#21392f]/15 pt-6 md:flex-row md:items-center md:justify-between">
