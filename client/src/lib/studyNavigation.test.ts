@@ -19,4 +19,12 @@ describe("studyNavigation", () => {
     expect(getStudyModeOption("videos")?.label).toBe("影片學習");
     expect(getStudyModeOption("songs")?.label).toBe("日文歌曲");
   });
+
+  it("keeps mobile bottom switcher labels short and user-facing", () => {
+    for (const option of STUDY_MODE_OPTIONS) {
+      expect(option.label.length).toBeLessThanOrEqual(4);
+      expect(option.label).not.toContain("平台");
+      expect(option.label).not.toContain("後台");
+    }
+  });
 });

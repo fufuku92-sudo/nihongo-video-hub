@@ -197,9 +197,16 @@ export default function Home() {
     if (first) setSelectedVideoId(first.id);
   }
 
+  function switchStudyMode(mode: StudyMode) {
+    setActiveStudyMode(mode);
+    window.setTimeout(() => {
+      document.getElementById("study-switch")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f4ecd8] text-[#21392f]">
+    <main className="min-h-screen overflow-hidden bg-[#f4ecd8] pb-28 text-[#21392f] md:pb-0">
       <section className="relative min-h-screen border-b border-[#21392f]/15">
         <div className="absolute inset-0 bg-[url('https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_paper_pattern-2qjVZvdvYrMsj2KwtsxgWV.webp')] bg-cover bg-center opacity-80" />
         <div className="absolute inset-y-0 right-0 hidden w-3/5 lg:block">
@@ -218,8 +225,8 @@ export default function Home() {
             </div>
           </div>
           <div className="hidden items-center gap-3 md:flex">
-            <a href="#study-switch" onClick={() => setActiveStudyMode("videos")} className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#21392f] transition hover:-translate-y-0.5">影片學習</a>
-            <a href="#study-switch" onClick={() => setActiveStudyMode("songs")} className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#b7442e] transition hover:-translate-y-0.5">日文歌曲</a>
+            <a href="#study-switch" onClick={() => switchStudyMode("videos")} className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#21392f] transition hover:-translate-y-0.5">影片學習</a>
+            <a href="#study-switch" onClick={() => switchStudyMode("songs")} className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#b7442e] transition hover:-translate-y-0.5">日文歌曲</a>
           </div>
         </nav>
 
@@ -236,12 +243,12 @@ export default function Home() {
               先選影片或歌曲，再依照自己的程度開始學。每天看一點、聽一點，慢慢累積日文語感。
             </p>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-              <a href="#study-switch" onClick={() => setActiveStudyMode("videos")}>
+              <a href="#study-switch" onClick={() => switchStudyMode("videos")}>
                 <Button className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
                   開始影片學習
                 </Button>
               </a>
-              <a href="#study-switch" onClick={() => setActiveStudyMode("songs")} className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
+              <a href="#study-switch" onClick={() => switchStudyMode("songs")} className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
                 用日文歌曲學習
               </a>
             </div>
@@ -256,7 +263,7 @@ export default function Home() {
             <h2 className="mt-2 font-serif text-3xl font-black tracking-[-0.03em] text-[#21392f] md:text-4xl">今天想怎麼學日文？</h2>
             <p className="mt-3 text-sm leading-6 text-[#314a40] md:text-base">想看教學影片，或想用歌曲練習，都可以從這裡開始。</p>
           </div>
-          <Tabs value={activeStudyMode} onValueChange={(value) => setActiveStudyMode(value as StudyMode)} className="w-full">
+          <Tabs value={activeStudyMode} onValueChange={(value) => switchStudyMode(value as StudyMode)} className="w-full">
             <TabsList className="grid h-auto w-full grid-cols-1 gap-3 rounded-none bg-transparent p-0 sm:grid-cols-2">
               {STUDY_MODE_OPTIONS.map((option) => {
                 const Icon = option.value === "videos" ? Video : Music2;
@@ -569,6 +576,27 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      <nav aria-label="手機快速切換學習內容" className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-[#21392f] bg-[#f8f0de]/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-6px_0_rgba(33,57,47,0.10)] backdrop-blur md:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-2 gap-3">
+          {STUDY_MODE_OPTIONS.map((option) => {
+            const Icon = option.value === "videos" ? Video : Music2;
+            const isActive = activeStudyMode === option.value;
+            return (
+              <button
+                key={`mobile-${option.value}`}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => switchStudyMode(option.value)}
+                className={`flex min-h-14 items-center justify-center gap-2 border-2 px-3 py-3 text-sm font-black transition ${isActive ? "border-[#21392f] bg-[#21392f] text-[#fff7e6] shadow-[4px_4px_0_#b7442e]" : "border-[#21392f]/25 bg-[#fff8e9] text-[#21392f] shadow-[3px_3px_0_#24628f]"}`}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </main>
   );
 }
