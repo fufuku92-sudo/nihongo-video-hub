@@ -15,15 +15,21 @@ const youtubeIdSchema = z
   .max(32, "影片 ID 太長")
   .regex(/^[a-zA-Z0-9_-]+$/, "影片 ID 只能包含英數字、底線與連字號");
 
+const optionalChannelUrlSchema = z.preprocess(
+  value => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().url("請填寫有效的頻道網址").max(500, "頻道網址過長").optional(),
+);
+
 const editableVideoFieldsSchema = z.object({
   title: z.string().trim().min(1, "請填寫影片標題").max(300, "影片標題過長"),
+  channel: z.string().trim().min(1, "請填寫頻道名稱").max(200, "頻道名稱過長"),
+  channelUrl: optionalChannelUrlSchema,
   level: levelSchema,
   reason: z.string().trim().max(800, "備註過長").optional(),
 });
 
 const videoInputSchema = editableVideoFieldsSchema.extend({
   youtubeId: youtubeIdSchema,
-  channel: z.string().trim().min(1, "請填寫頻道名稱").max(200, "頻道名稱過長"),
   topic: topicSchema,
 });
 
@@ -51,6 +57,7 @@ export const appRouter = router({
         youtubeId: input.youtubeId,
         title: input.title,
         channel: input.channel,
+        channelUrl: input.channelUrl || null,
         level: input.level,
         topic: input.topic,
         reason: input.reason || null,
@@ -60,6 +67,8 @@ export const appRouter = router({
     update: adminProcedure.input(videoUpdateSchema).mutation(({ input }) =>
       db.updateVideoByYoutubeId(input.youtubeId, {
         title: input.title,
+        channel: input.channel,
+        channelUrl: input.channelUrl || null,
         level: input.level,
         reason: input.reason || null,
       }),

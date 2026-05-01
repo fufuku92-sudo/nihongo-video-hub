@@ -124,6 +124,7 @@ export async function upsertVideo(video: InsertVideo) {
       set: {
         title: video.title,
         channel: video.channel,
+        channelUrl: video.channelUrl ?? null,
         level: video.level,
         topic: video.topic,
         reason: video.reason ?? null,
@@ -136,7 +137,7 @@ export async function upsertVideo(video: InsertVideo) {
 
 export async function updateVideoByYoutubeId(
   youtubeId: string,
-  updates: Pick<InsertVideo, "title" | "level" | "reason">,
+  updates: Pick<InsertVideo, "title" | "channel" | "channelUrl" | "level" | "reason">,
 ) {
   const db = await getDb();
   if (!db) {
@@ -147,6 +148,8 @@ export async function updateVideoByYoutubeId(
     .update(videos)
     .set({
       title: updates.title,
+      channel: updates.channel,
+      channelUrl: updates.channelUrl ?? null,
       level: updates.level,
       reason: updates.reason ?? null,
     })

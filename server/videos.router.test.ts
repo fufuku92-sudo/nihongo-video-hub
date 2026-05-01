@@ -50,6 +50,7 @@ describe("videos router", () => {
         youtubeId: "abc123XYZ",
         title: "N5 文法練習",
         channel: "Nihongo Channel",
+        channelUrl: "https://www.youtube.com/@nihongo",
         level: "N5",
         topic: "文法",
         reason: "適合入門複習。",
@@ -64,6 +65,7 @@ describe("videos router", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]?.youtubeId).toBe("abc123XYZ");
+    expect(result[0]?.channelUrl).toBe("https://www.youtube.com/@nihongo");
     expect(dbMocks.listVideos).toHaveBeenCalledTimes(1);
   });
 
@@ -80,6 +82,7 @@ describe("videos router", () => {
       youtubeId: "n3Listen_01",
       title: "N3 聽力逐句解析",
       channel: "Elsaの放送",
+      channelUrl: "https://www.youtube.com/@ElsaJapanese",
       level: "N3",
       topic: "聽解",
       reason: "逐句解析適合中級學習者。",
@@ -90,6 +93,7 @@ describe("videos router", () => {
       expect.objectContaining({
         youtubeId: "n3Listen_01",
         title: "N3 聽力逐句解析",
+        channelUrl: "https://www.youtube.com/@ElsaJapanese",
         createdByUserId: 7,
       }),
     );
@@ -103,6 +107,7 @@ describe("videos router", () => {
         youtubeId: "n2Grammar",
         title: "N2 文法整理",
         channel: "Nihongo Channel",
+        channelUrl: "https://www.youtube.com/@nihongo",
         level: "N2",
         topic: "文法",
         reason: "管理員限定操作測試。",
@@ -111,12 +116,13 @@ describe("videos router", () => {
     expect(dbMocks.upsertVideo).not.toHaveBeenCalled();
   });
 
-  it("allows admins to update persisted video title, level and reason", async () => {
+  it("allows admins to update persisted video title, channel link, level and reason", async () => {
     dbMocks.updateVideoByYoutubeId.mockImplementation(async (youtubeId, input) => ({
       id: 3,
       youtubeId,
       title: input.title,
-      channel: "Existing Channel",
+      channel: input.channel,
+      channelUrl: input.channelUrl,
       level: input.level,
       topic: "文法",
       reason: input.reason,
@@ -129,17 +135,23 @@ describe("videos router", () => {
     const result = await caller.videos.update({
       youtubeId: "n4Grammar01",
       title: "N4 文法整理更新版",
+      channel: "更新後頻道",
+      channelUrl: "https://www.youtube.com/@updated-channel",
       level: "N4",
       reason: "更新後的備註資訊。",
     });
 
     expect(result?.title).toBe("N4 文法整理更新版");
     expect(result?.level).toBe("N4");
+    expect(result?.channel).toBe("更新後頻道");
+    expect(result?.channelUrl).toBe("https://www.youtube.com/@updated-channel");
     expect(result?.reason).toBe("更新後的備註資訊。");
     expect(dbMocks.updateVideoByYoutubeId).toHaveBeenCalledWith(
       "n4Grammar01",
       expect.objectContaining({
         title: "N4 文法整理更新版",
+        channel: "更新後頻道",
+        channelUrl: "https://www.youtube.com/@updated-channel",
         level: "N4",
         reason: "更新後的備註資訊。",
       }),
@@ -153,6 +165,8 @@ describe("videos router", () => {
       caller.videos.update({
         youtubeId: "n4Grammar01",
         title: "未授權更新",
+        channel: "未授權頻道",
+        channelUrl: "https://www.youtube.com/@unauthorized",
         level: "N4",
         reason: "不應寫入。",
       }),

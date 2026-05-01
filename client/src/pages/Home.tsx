@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { BookOpen, ExternalLink, Headphones, Map, PlayCircle, Search, ShieldCheck, Train, Video } from "lucide-react";
@@ -17,6 +18,7 @@ type VideoItem = {
   id: string;
   title: string;
   channel: string;
+  channelUrl?: string | null;
   level: Level;
   topic: Topic;
   reason: string;
@@ -37,34 +39,34 @@ const levels: Array<{ level: Level; label: string; description: string; color: s
 const topics: Array<"全部" | Topic> = ["全部", "文法", "單字", "聽解", "讀解", "綜合"];
 
 const seedVideos: VideoItem[] = [
-  { id: "3MPbTCqIkuM", level: "N5", topic: "文法", title: "JLPT N5 Grammar Practice｜N5 文法過去問解説", channel: "SAKINA | JOURNEY TO JAPAN", reason: "適合作為 N5 文法練習入口，標題與級別明確。", confidence: "高" },
-  { id: "0V2Y8AIUugI", level: "N5", topic: "單字", title: "一次學完所有的 N5 動詞（全126個單字）", channel: "日文筆記本", reason: "以圖文例句整理 N5 動詞，適合初學者建立語彙基礎。", confidence: "高" },
-  { id: "x6ICllwCMxE", level: "N5", topic: "單字", title: "日檢 N5 必考單字｜名詞篇單字＋例句", channel: "YouTube 日文學習頻道", reason: "以 N5 必考名詞與例句作為語彙補充，適合初學者反覆練習。", confidence: "中" },
-  { id: "qRACZeHacpA", level: "N5", topic: "單字", title: "日檢 N5 必考單字｜副詞・連體詞・接續詞篇", channel: "YouTube 日文學習頻道", reason: "補充常見副詞與連接語，適合搭配基礎文法學習。", confidence: "中" },
-  { id: "6nByRvRMuaY", level: "N5", topic: "聽解", title: "JLPT N5 Listening Practice with Mochi Sensei", channel: "Mochi real Japanese", reason: "針對 N5 聽力練習，適合建立初級聽懂速度。", confidence: "高" },
-  { id: "j8RgqewE2C0", level: "N5", topic: "綜合", title: "日本語 N5 初級綜合複習 1｜聽力練習", channel: "日本語の仲間", reason: "整合初級複習與聽力，適合考前整理。", confidence: "高" },
-  { id: "8VrmqrSrONA", level: "N5", topic: "讀解", title: "N5 讀解完全攻略｜文法＋單字＋解題", channel: "YouTube 日文學習頻道", reason: "聚焦 N5 讀解解題，補足初級閱讀練習。", confidence: "中" },
-  { id: "bTWnm02sObk", level: "N5", topic: "讀解", title: "JLPT N5 Online Course｜Reading Practice", channel: "IndoSensei / YouTube", reason: "以線上課程形式練習 N5 讀解，適合想增加英文輔助材料的學習者。", confidence: "中" },
-  { id: "kRTh53juVOU", level: "N4", topic: "文法", title: "N4 日文文法 79 個｜上篇", channel: "Elsaの放送", reason: "涵蓋 N4 必記文法，適合系統化複習。", confidence: "高" },
-  { id: "uIS_oika5w4", level: "N4", topic: "單字", title: "Japanese Basic Vocabulary and Grammar｜JLPT N4", channel: "with Taka", reason: "以 N4 基礎單字與文法為主，適合補強核心能力。", confidence: "中" },
-  { id: "w-BvFOMkb40", level: "N4", topic: "聽解", title: "JLPT N4 Listening", channel: "Sun and Moon Channel", reason: "提供 N4 聽解練習，適合搭配通勤或碎片時間。", confidence: "中" },
-  { id: "yPeWoZevNcU", level: "N4", topic: "讀解", title: "日語能力測試 N4｜閱讀理解篇", channel: "Elsaの放送", reason: "聚焦閱讀理解並含解說，適合作為 N4 讀解入門。", confidence: "高" },
-  { id: "p5vFjq_rQtw", level: "N4", topic: "讀解", title: "JLPT 日語線上課程｜享受日文文章讀解", channel: "YouTube 日文學習頻道", reason: "以閱讀文章為主，適合 N4 到 N3 過渡期增加閱讀量。", confidence: "中" },
-  { id: "cRSAqhqPWG4", level: "N4", topic: "單字", title: "日檢 N5-N1 必備單字・動詞補充", channel: "YouTube Shorts", reason: "短影片形式可作為單字碎片複習，適合補充清單。", confidence: "中" },
-  { id: "vpfwGneh4W4", level: "N3", topic: "聽解", title: "這樣聽懂 N3 聽力｜完整逐句解析", channel: "Elsaの放送", reason: "逐句解析 N3 聽力，有助理解句子連音與語境。", confidence: "高" },
-  { id: "OuAtfP3-pk8", level: "N3", topic: "聽解", title: "JLPT N3 聽力 20 分鐘免費練習", channel: "Elsaの放送", reason: "以對話解析與例句教學降低 N3 聽力門檻。", confidence: "高" },
-  { id: "w9AQ5a6-acU", level: "N3", topic: "綜合", title: "JLPT 考題改革趨勢與準備方式", channel: "抓尼先生 / 學日文 & 日本大小事", reason: "整理單字、文法、讀解與聽解準備策略。", confidence: "高" },
-  { id: "_EgMcR2a0-4", level: "N3", topic: "單字", title: "一次聽完 250 個 N3 單字｜語彙聽力跟讀", channel: "旭文日本語學院", reason: "透過聽力與跟讀強化 N3 詞彙記憶。", confidence: "高" },
-  { id: "aUjo01G1O2U", level: "N3", topic: "綜合", title: "Japanese Self Study Tips for N5 N4 N3 N2 and N1", channel: "Nihonno Neko / YouTube", reason: "適合作為自學方法補充，尤其可用於 N3 之後規劃讀書節奏。", confidence: "中" },
-  { id: "DKzxO7ujP58", level: "N3", topic: "綜合", title: "JLPT N5 N4 N3 N2 N1 準備提醒與學習方向", channel: "Arai Academy / YouTube", reason: "提供跨級別考前提醒，可放在中級階段作為策略影片。", confidence: "中" },
-  { id: "JHikaTQAJVQ", level: "N2", topic: "文法", title: "N2 文法 144 個｜上篇", channel: "Elsaの放送", reason: "整理 N2 常見文法，適合中高級考生建立清單。", confidence: "高" },
-  { id: "YWDC6z5DFkM", level: "N2", topic: "文法", title: "N2 攻略大全｜文法問題 50 題", channel: "日本語之森台灣", reason: "以題目演練方式檢查 N2 文法熟悉度。", confidence: "高" },
-  { id: "cOa2dNx28xg", level: "N2", topic: "文法", title: "10 小時帶你拿下 N2 語法｜高頻語法總結", channel: "日本择优进学塾", reason: "長時段整理高頻語法，可作為集中複習材料。", confidence: "中" },
-  { id: "CkRE2ZoXNOc", level: "N2", topic: "單字", title: "日語檢定 N2 重要單字 part1", channel: "井上一宏", reason: "針對 N2 重要單字，適合分段背誦。", confidence: "高" },
-  { id: "j_qqHQtUOzw", level: "N1", topic: "文法", title: "N1 文法 141 個｜上篇", channel: "Elsaの放送", reason: "系統整理 N1 文法，適合進入高級句型複習。", confidence: "高" },
-  { id: "r5rNHrJg-7I", level: "N1", topic: "聽解", title: "5 HRs Immerse Japanese Listening JLPT N1", channel: "Multi Language Practice", reason: "長時間沉浸式 N1 聽力訓練，適合建立耐力。", confidence: "高" },
-  { id: "_Beflvl8PAs", level: "N1", topic: "單字", title: "N1 1500 單字｜上篇", channel: "Elsaの放送", reason: "聚焦 N1 高階詞彙，適合作為語彙清單。", confidence: "高" },
-  { id: "F0ctfIuXKHQ", level: "N1", topic: "讀解", title: "Master JLPT N1 Reading Comprehension", channel: "CarlosCoordinator", reason: "聚焦 N1 讀解策略，適合補強長文理解。", confidence: "中" },
+  { id: "3MPbTCqIkuM", channelUrl: "https://www.youtube.com/@journeytojapan_sakina", level: "N5", topic: "文法", title: "JLPT N5 Grammar Practice｜N5 文法過去問解説", channel: "SAKINA | JOURNEY TO JAPAN", reason: "適合作為 N5 文法練習入口，標題與級別明確。", confidence: "高" },
+  { id: "0V2Y8AIUugI", channelUrl: "https://www.youtube.com/@nihongo-note", level: "N5", topic: "單字", title: "一次學完所有的 N5 動詞（全126個單字）", channel: "日文筆記本", reason: "以圖文例句整理 N5 動詞，適合初學者建立語彙基礎。", confidence: "高" },
+  { id: "x6ICllwCMxE", channelUrl: "https://www.youtube.com/@ListeningJapanese-zhTW", level: "N5", topic: "單字", title: "日檢 N5 必考單字｜名詞篇單字＋例句", channel: "YouTube 日文學習頻道", reason: "以 N5 必考名詞與例句作為語彙補充，適合初學者反覆練習。", confidence: "中" },
+  { id: "qRACZeHacpA", channelUrl: "https://www.youtube.com/@ListeningJapanese-zhTW", level: "N5", topic: "單字", title: "日檢 N5 必考單字｜副詞・連體詞・接續詞篇", channel: "YouTube 日文學習頻道", reason: "補充常見副詞與連接語，適合搭配基礎文法學習。", confidence: "中" },
+  { id: "6nByRvRMuaY", channelUrl: "https://www.youtube.com/@mochirealjapanese3430", level: "N5", topic: "聽解", title: "JLPT N5 Listening Practice with Mochi Sensei", channel: "Mochi real Japanese", reason: "針對 N5 聽力練習，適合建立初級聽懂速度。", confidence: "高" },
+  { id: "j8RgqewE2C0", channelUrl: "https://www.youtube.com/@nihongononakama", level: "N5", topic: "綜合", title: "日本語 N5 初級綜合複習 1｜聽力練習", channel: "日本語の仲間", reason: "整合初級複習與聽力，適合考前整理。", confidence: "高" },
+  { id: "8VrmqrSrONA", channelUrl: "https://www.youtube.com/@ElsaJapanese", level: "N5", topic: "讀解", title: "N5 讀解完全攻略｜文法＋單字＋解題", channel: "YouTube 日文學習頻道", reason: "聚焦 N5 讀解解題，補足初級閱讀練習。", confidence: "中" },
+  { id: "bTWnm02sObk", channelUrl: "https://www.youtube.com/@Indosensei", level: "N5", topic: "讀解", title: "JLPT N5 Online Course｜Reading Practice", channel: "IndoSensei / YouTube", reason: "以線上課程形式練習 N5 讀解，適合想增加英文輔助材料的學習者。", confidence: "中" },
+  { id: "kRTh53juVOU", channelUrl: "https://www.youtube.com/@ElsaJapanese", level: "N4", topic: "文法", title: "N4 日文文法 79 個｜上篇", channel: "Elsaの放送", reason: "涵蓋 N4 必記文法，適合系統化複習。", confidence: "高" },
+  { id: "uIS_oika5w4", channelUrl: "https://www.youtube.com/@JapanesewithTaka", level: "N4", topic: "單字", title: "Japanese Basic Vocabulary and Grammar｜JLPT N4", channel: "with Taka", reason: "以 N4 基礎單字與文法為主，適合補強核心能力。", confidence: "中" },
+  { id: "w-BvFOMkb40", channelUrl: "https://www.youtube.com/@sunandmoon2019", level: "N4", topic: "聽解", title: "JLPT N4 Listening", channel: "Sun and Moon Channel", reason: "提供 N4 聽解練習，適合搭配通勤或碎片時間。", confidence: "中" },
+  { id: "yPeWoZevNcU", channelUrl: "https://www.youtube.com/@ElsaJapanese", level: "N4", topic: "讀解", title: "日語能力測試 N4｜閱讀理解篇", channel: "Elsaの放送", reason: "聚焦閱讀理解並含解說，適合作為 N4 讀解入門。", confidence: "高" },
+  { id: "p5vFjq_rQtw", channelUrl: "https://www.youtube.com/@yesjap568", level: "N4", topic: "讀解", title: "JLPT 日語線上課程｜享受日文文章讀解", channel: "YouTube 日文學習頻道", reason: "以閱讀文章為主，適合 N4 到 N3 過渡期增加閱讀量。", confidence: "中" },
+  { id: "cRSAqhqPWG4", channelUrl: "https://www.youtube.com/@wusjp", level: "N4", topic: "單字", title: "日檢 N5-N1 必備單字・動詞補充", channel: "YouTube Shorts", reason: "短影片形式可作為單字碎片複習，適合補充清單。", confidence: "中" },
+  { id: "vpfwGneh4W4", channelUrl: "https://www.youtube.com/@ElsaJapanese", level: "N3", topic: "聽解", title: "這樣聽懂 N3 聽力｜完整逐句解析", channel: "Elsaの放送", reason: "逐句解析 N3 聽力，有助理解句子連音與語境。", confidence: "高" },
+  { id: "OuAtfP3-pk8", channelUrl: "https://www.youtube.com/@ElsaJapanese", level: "N3", topic: "聽解", title: "JLPT N3 聽力 20 分鐘免費練習", channel: "Elsaの放送", reason: "以對話解析與例句教學降低 N3 聽力門檻。", confidence: "高" },
+  { id: "w9AQ5a6-acU", channelUrl: "https://www.youtube.com/@johnysensei", level: "N3", topic: "綜合", title: "JLPT 考題改革趨勢與準備方式", channel: "抓尼先生 / 學日文 & 日本大小事", reason: "整理單字、文法、讀解與聽解準備策略。", confidence: "高" },
+  { id: "_EgMcR2a0-4", channelUrl: "https://www.youtube.com/@shuwoon", level: "N3", topic: "單字", title: "一次聽完 250 個 N3 單字｜語彙聽力跟讀", channel: "旭文日本語學院", reason: "透過聽力與跟讀強化 N3 詞彙記憶。", confidence: "高" },
+  { id: "aUjo01G1O2U", channelUrl: "https://www.youtube.com/@NihonnoNeko", level: "N3", topic: "綜合", title: "Japanese Self Study Tips for N5 N4 N3 N2 and N1", channel: "Nihonno Neko / YouTube", reason: "適合作為自學方法補充，尤其可用於 N3 之後規劃讀書節奏。", confidence: "中" },
+  { id: "DKzxO7ujP58", channelUrl: "https://www.youtube.com/@AraiAcademyofJapaneseStudies", level: "N3", topic: "綜合", title: "JLPT N5 N4 N3 N2 N1 準備提醒與學習方向", channel: "Arai Academy / YouTube", reason: "提供跨級別考前提醒，可放在中級階段作為策略影片。", confidence: "中" },
+  { id: "JHikaTQAJVQ", channelUrl: "https://www.youtube.com/@ElsaJapanese", level: "N2", topic: "文法", title: "N2 文法 144 個｜上篇", channel: "Elsaの放送", reason: "整理 N2 常見文法，適合中高級考生建立清單。", confidence: "高" },
+  { id: "YWDC6z5DFkM", channelUrl: "https://www.youtube.com/@nihongonomori_taiwan", level: "N2", topic: "文法", title: "N2 攻略大全｜文法問題 50 題", channel: "日本語之森台灣", reason: "以題目演練方式檢查 N2 文法熟悉度。", confidence: "高" },
+  { id: "cOa2dNx28xg", channelUrl: "https://www.youtube.com/@%E6%97%A5%E6%9C%AC%E6%8B%A9%E4%BC%98%E8%BF%9B%E5%AD%A6%E5%A1%BE", level: "N2", topic: "文法", title: "10 小時帶你拿下 N2 語法｜高頻語法總結", channel: "日本择优进学塾", reason: "長時段整理高頻語法，可作為集中複習材料。", confidence: "中" },
+  { id: "CkRE2ZoXNOc", channelUrl: "https://www.youtube.com/@inouesensei", level: "N2", topic: "單字", title: "日語檢定 N2 重要單字 part1", channel: "井上一宏", reason: "針對 N2 重要單字，適合分段背誦。", confidence: "高" },
+  { id: "j_qqHQtUOzw", channelUrl: "https://www.youtube.com/@ElsaJapanese", level: "N1", topic: "文法", title: "N1 文法 141 個｜上篇", channel: "Elsaの放送", reason: "系統整理 N1 文法，適合進入高級句型複習。", confidence: "高" },
+  { id: "r5rNHrJg-7I", channelUrl: "https://www.youtube.com/@MultiLanguagePractice", level: "N1", topic: "聽解", title: "5 HRs Immerse Japanese Listening JLPT N1", channel: "Multi Language Practice", reason: "長時間沉浸式 N1 聽力訓練，適合建立耐力。", confidence: "高" },
+  { id: "_Beflvl8PAs", channelUrl: "https://www.youtube.com/@ElsaJapanese", level: "N1", topic: "單字", title: "N1 1500 單字｜上篇", channel: "Elsaの放送", reason: "聚焦 N1 高階詞彙，適合作為語彙清單。", confidence: "高" },
+  { id: "F0ctfIuXKHQ", channelUrl: "https://www.youtube.com/@CarlosCoordinator", level: "N1", topic: "讀解", title: "Master JLPT N1 Reading Comprehension", channel: "CarlosCoordinator", reason: "聚焦 N1 讀解策略，適合補強長文理解。", confidence: "中" },
 ];
 
 function topicIcon(topic: Topic) {
@@ -93,6 +95,7 @@ export default function Home() {
       id: video.youtubeId,
       title: video.title,
       channel: video.channel,
+      channelUrl: video.channelUrl,
       level: video.level as Level,
       topic: video.topic as Topic,
       reason: video.reason || "由內容維護新增的學習影片。",
@@ -247,6 +250,11 @@ export default function Home() {
                     <a href={`https://www.youtube.com/watch?v=${selectedVideo.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#21392f] bg-[#21392f] px-4 py-2 text-sm font-bold text-[#fff7e6] transition hover:-translate-y-0.5">
                       到 YouTube 原頁 <ExternalLink className="h-4 w-4" />
                     </a>
+                    {selectedVideo.channelUrl ? (
+                      <a href={selectedVideo.channelUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#24628f] bg-[#f8f0de] px-4 py-2 text-sm font-bold text-[#24628f] transition hover:-translate-y-0.5 hover:bg-[#24628f] hover:text-[#fff7e6]">
+                        前往原頻道 <ExternalLink className="h-4 w-4" />
+                      </a>
+                    ) : null}
                     <span className="inline-flex items-center border border-[#21392f]/25 px-4 py-2 text-sm font-bold text-[#21392f]/80">標記：{selectedVideo.confidence}</span>
                   </div>
                 </div>
@@ -266,21 +274,32 @@ export default function Home() {
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {filteredVideos.map((video) => (
-                  <button
+                  <article
                     key={`${video.custom ? "custom" : "seed"}-${video.id}`}
-                    onClick={() => setSelectedVideoId(video.id)}
-                    className={`group min-h-[230px] border-2 bg-[#fff8e9] p-5 text-left transition duration-200 ${selectedVideo.id === video.id ? "border-[#b7442e] shadow-[7px_7px_0_#b7442e]" : "border-[#21392f]/20 hover:-translate-y-1 hover:border-[#21392f] hover:shadow-[7px_7px_0_#21392f]"}`}
+                    className={`group flex min-h-[250px] flex-col border-2 bg-[#fff8e9] p-5 text-left transition duration-200 ${selectedVideo.id === video.id ? "border-[#b7442e] shadow-[7px_7px_0_#b7442e]" : "border-[#21392f]/20 hover:-translate-y-1 hover:border-[#21392f] hover:shadow-[7px_7px_0_#21392f]"}`}
                   >
-                    <div className="mb-5 flex items-center justify-between gap-3">
-                      <span className="inline-flex items-center gap-2 bg-[#2f5d46] px-3 py-1 text-sm font-black text-[#fff7e6]">
-                        {topicIcon(video.topic)} {video.level}｜{video.topic}
-                      </span>
-                      <PlayCircle className="h-7 w-7 text-[#b7442e] transition group-hover:scale-110" />
+                    <button type="button" onClick={() => setSelectedVideoId(video.id)} className="flex flex-1 flex-col text-left">
+                      <div className="mb-5 flex items-center justify-between gap-3">
+                        <span className="inline-flex items-center gap-2 bg-[#2f5d46] px-3 py-1 text-sm font-black text-[#fff7e6]">
+                          {topicIcon(video.topic)} {video.level}｜{video.topic}
+                        </span>
+                        <PlayCircle className="h-7 w-7 text-[#b7442e] transition group-hover:scale-110" />
+                      </div>
+                      <h4 className="font-serif text-xl font-black leading-snug text-[#21392f]">{video.title}</h4>
+                      <p className="mt-3 text-sm font-bold text-[#24628f]">{video.channel}</p>
+                      <p className="mt-4 text-sm leading-6 text-[#314a40]">{video.reason}</p>
+                    </button>
+                    <div className="mt-5 flex flex-wrap gap-2 border-t border-[#21392f]/15 pt-4">
+                      <button type="button" onClick={() => setSelectedVideoId(video.id)} className="inline-flex items-center gap-2 border border-[#21392f] bg-[#21392f] px-3 py-2 text-xs font-black text-[#fff7e6] transition hover:-translate-y-0.5">
+                        播放影片 <PlayCircle className="h-3.5 w-3.5" />
+                      </button>
+                      {video.channelUrl ? (
+                        <a href={video.channelUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#24628f] bg-[#f8f0de] px-3 py-2 text-xs font-black text-[#24628f] transition hover:-translate-y-0.5 hover:bg-[#24628f] hover:text-[#fff7e6]">
+                          前往原頻道 <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      ) : null}
                     </div>
-                    <h4 className="font-serif text-xl font-black leading-snug text-[#21392f]">{video.title}</h4>
-                    <p className="mt-3 text-sm font-bold text-[#24628f]">{video.channel}</p>
-                    <p className="mt-4 text-sm leading-6 text-[#314a40]">{video.reason}</p>
-                  </button>
+                  </article>
                 ))}
               </div>
             </div>

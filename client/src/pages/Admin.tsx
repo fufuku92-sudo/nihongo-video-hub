@@ -1,9 +1,10 @@
 import { FormEvent, useMemo, useState } from "react";
+
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { Lock, LogOut, Pencil, Plus, ShieldCheck, Train, Trash2, X } from "lucide-react";
+import { ExternalLink, Lock, LogOut, Pencil, Plus, ShieldCheck, Train, Trash2, X } from "lucide-react";
 
 type Level = "N5" | "N4" | "N3" | "N2" | "N1";
 type Topic = "文法" | "單字" | "聽解" | "讀解" | "綜合";
@@ -12,6 +13,7 @@ type VideoItem = {
   id: string;
   title: string;
   channel: string;
+  channelUrl?: string | null;
   level: Level;
   topic: Topic;
   reason: string;
@@ -21,6 +23,7 @@ type FormState = {
   url: string;
   title: string;
   channel: string;
+  channelUrl: string;
   level: Level;
   topic: Topic;
   note: string;
@@ -40,6 +43,7 @@ const emptyForm: FormState = {
   url: "",
   title: "",
   channel: "",
+  channelUrl: "",
   level: "N5",
   topic: "文法",
   note: "",
@@ -79,6 +83,7 @@ export default function Admin() {
       id: video.youtubeId,
       title: video.title,
       channel: video.channel,
+      channelUrl: video.channelUrl ?? null,
       level: video.level as Level,
       topic: video.topic as Topic,
       reason: video.reason || "由管理員新增的學習影片。",
@@ -156,6 +161,7 @@ export default function Admin() {
       youtubeId: id,
       title: form.title.trim(),
       channel: form.channel.trim() || "自訂來源",
+      channelUrl: form.channelUrl.trim() || undefined,
       level: form.level,
       topic: form.topic,
       reason: form.note.trim() || "由管理員新增的學習影片。",
@@ -173,6 +179,7 @@ export default function Admin() {
       url: video.id,
       title: video.title,
       channel: video.channel,
+      channelUrl: video.channelUrl ?? "",
       level: video.level,
       topic: video.topic,
       note: video.reason,
@@ -202,6 +209,8 @@ export default function Admin() {
     updateVideoMutation.mutate({
       youtubeId: id,
       title: editForm.title.trim(),
+      channel: editForm.channel.trim() || "自訂來源",
+      channelUrl: editForm.channelUrl.trim() || undefined,
       level: editForm.level,
       reason: editForm.note.trim() || "由管理員新增的學習影片。",
     });
@@ -322,6 +331,11 @@ export default function Admin() {
                     <input value={form.channel} onChange={(event) => setForm({ ...form, channel: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：Elsaの放送" />
                   </div>
                   <div>
+                    <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">原頻道網址</label>
+                    <input value={form.channelUrl} onChange={(event) => setForm({ ...form, channelUrl: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：https://www.youtube.com/@ElsaJapanese" />
+                    <p className="mt-2 text-xs font-semibold leading-5 text-[#314a40]/75">填入後公開影片卡片會顯示「前往原頻道」按鈕，協助創作者增加曝光。</p>
+                  </div>
+                  <div>
                     <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">備註</label>
                     <textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} className="min-h-24 w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：適合考前複習，老師講解速度清楚。" />
                   </div>
@@ -358,11 +372,21 @@ export default function Admin() {
                                 <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">影片標題</label>
                                 <input value={editForm.title} onChange={(event) => setEditForm({ ...editForm, title: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" />
                               </div>
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                  <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">頻道名稱</label>
+                                  <input value={editForm.channel} onChange={(event) => setEditForm({ ...editForm, channel: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" />
+                                </div>
+                                <div>
+                                  <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">JLPT 級別</label>
+                                  <select value={editForm.level} onChange={(event) => setEditForm({ ...editForm, level: event.target.value as Level })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]">
+                                    {levels.map((item) => <option key={item.level} value={item.level}>{item.level}｜{item.label}</option>)}
+                                  </select>
+                                </div>
+                              </div>
                               <div>
-                                <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">JLPT 級別</label>
-                                <select value={editForm.level} onChange={(event) => setEditForm({ ...editForm, level: event.target.value as Level })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]">
-                                  {levels.map((item) => <option key={item.level} value={item.level}>{item.level}｜{item.label}</option>)}
-                                </select>
+                                <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">原頻道網址</label>
+                                <input value={editForm.channelUrl} onChange={(event) => setEditForm({ ...editForm, channelUrl: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="https://www.youtube.com/@channel" />
                               </div>
                               <div>
                                 <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">備註</label>
@@ -378,6 +402,11 @@ export default function Admin() {
                                 <p className="text-sm font-black text-[#b7442e]">{video.level}｜{video.topic}</p>
                                 <p className="mt-1 font-bold">{video.title}</p>
                                 <p className="mt-1 text-sm text-[#314a40]">{video.channel}</p>
+                                {video.channelUrl ? (
+                                  <a href={video.channelUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-black text-[#24628f] underline decoration-[#24628f]/40 underline-offset-4">
+                                    原頻道連結 <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                ) : null}
                                 <p className="mt-2 text-sm leading-6 text-[#314a40]/80">{video.reason}</p>
                               </div>
                               <div className="flex shrink-0 gap-2">

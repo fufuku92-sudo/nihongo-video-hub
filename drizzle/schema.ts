@@ -27,6 +27,7 @@ export const videos = mysqlTable("videos", {
   youtubeId: varchar("youtubeId", { length: 32 }).notNull().unique(),
   title: text("title").notNull(),
   channel: text("channel").notNull(),
+  channelUrl: text("channelUrl"),
   level: mysqlEnum("level", ["N5", "N4", "N3", "N2", "N1"]).notNull(),
   topic: mysqlEnum("topic", ["文法", "單字", "聽解", "讀解", "綜合"]).notNull(),
   reason: text("reason"),
