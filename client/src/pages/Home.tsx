@@ -183,6 +183,11 @@ export default function Home() {
 
   const selectedSong = filteredSongs.find((song) => song.id === selectedSongId) ?? filteredSongs[0];
 
+  const podcasts = useMemo(() => seedPodcasts, []);
+  const podcastCategories = useMemo(() => getAllCategories(podcasts), [podcasts]);
+  const filteredPodcasts = useMemo(() => getPodcastsByLevel(podcasts, activePodcastLevel), [activePodcastLevel, podcasts]);
+  const selectedPodcast = filteredPodcasts.find((podcast) => podcast.id === selectedPodcastId) ?? filteredPodcasts[0];
+
   useEffect(() => {
     if (!videos.some((video) => video.id === selectedVideoId)) {
       setSelectedVideoId(filteredVideoFallback(videos, activeLevel, activeTopic));
@@ -199,6 +204,17 @@ export default function Home() {
       setSelectedSongId(filteredSongs[0].id);
     }
   }, [filteredSongs, selectedSongId]);
+
+  useEffect(() => {
+    if (filteredPodcasts.length === 0) {
+      setSelectedPodcastId(null);
+      return;
+    }
+
+    if (!selectedPodcastId || !filteredPodcasts.some((podcast) => podcast.id === selectedPodcastId)) {
+      setSelectedPodcastId(filteredPodcasts[0].id);
+    }
+  }, [filteredPodcasts, selectedPodcastId]);
 
   const countsByLevel = useMemo(() => {
     return levels.reduce<Record<Level, number>>((acc, item) => {
