@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ALL_SONG_ARTISTS, ALL_SONG_LEVELS, filterSongs, getSongArtists, type SongFilterLevel } from "@/lib/songFilters";
+import { HOME_MOTION } from "@/lib/homeMotion";
 import { HOME_SEO, applySeoMetadata } from "@/lib/seo";
 import { STUDY_MODE_OPTIONS, type StudyMode } from "@/lib/studyNavigation";
 import { trpc } from "@/lib/trpc";
@@ -211,15 +212,15 @@ export default function Home() {
 
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f4ecd8] pb-28 text-[#21392f] md:pb-0">
+    <main className={`min-h-screen overflow-hidden bg-[#f4ecd8] pb-28 text-[#21392f] md:pb-0 ${HOME_MOTION.page}`}>
       <section className="relative min-h-screen border-b border-[#21392f]/15">
         <div className="absolute inset-0 bg-[url('https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_paper_pattern-2qjVZvdvYrMsj2KwtsxgWV.webp')] bg-cover bg-center opacity-80" />
         <div className="absolute inset-y-0 right-0 hidden w-3/5 lg:block">
-          <img src={heroImage} alt="N5 到 N1 的日文學習路線圖插畫" className="h-full w-full object-cover object-center opacity-95 mix-blend-multiply" />
+          <img src={heroImage} alt="N5 到 N1 的日文學習路線圖插畫" className={`h-full w-full object-cover object-center opacity-95 mix-blend-multiply ${HOME_MOTION.heroImage}`} />
           <div className="absolute inset-0 bg-gradient-to-r from-[#f4ecd8] via-[#f4ecd8]/40 to-transparent" />
         </div>
 
-        <nav className="relative z-10 flex items-center justify-between px-5 py-6 md:px-10 lg:px-16">
+        <nav className={`relative z-10 flex items-center justify-between px-5 py-6 md:px-10 lg:px-16 ${HOME_MOTION.nav}`}>
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center border-2 border-[#21392f] bg-[#f8f0de] shadow-[4px_4px_0_#b7442e]">
               <Train className="h-5 w-5" />
@@ -237,17 +238,17 @@ export default function Home() {
 
         <div className="relative z-10 grid min-h-[calc(100vh-96px)] items-center px-5 pb-16 md:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-16">
           <div className="max-w-3xl pt-10 lg:pt-0">
-            <div className="mb-8 inline-flex items-center gap-2 border border-[#21392f]/25 bg-[#f8f0de]/90 px-3 py-2 text-sm font-semibold shadow-[3px_3px_0_#24628f]">
+            <div className={`mb-8 inline-flex items-center gap-2 border border-[#21392f]/25 bg-[#f8f0de]/90 px-3 py-2 text-sm font-semibold shadow-[3px_3px_0_#24628f] ${HOME_MOTION.heroBadge}`}>
               <ShieldCheck className="h-4 w-4 text-[#2f5d46]" />
               JLPT N5–N1 學習入口
             </div>
-            <h1 className="font-serif text-5xl font-black leading-[0.95] tracking-[-0.04em] text-[#21392f] md:text-7xl lg:text-8xl">
+            <h1 className={`font-serif text-5xl font-black leading-[0.95] tracking-[-0.04em] text-[#21392f] md:text-7xl lg:text-8xl ${HOME_MOTION.heroTitle}`}>
               從 N5 到 N1，沿著日語學習路線前進。
             </h1>
-            <p className="mt-7 max-w-2xl text-lg leading-8 text-[#314a40] md:text-xl">
+            <p className={`mt-7 max-w-2xl text-lg leading-8 text-[#314a40] md:text-xl ${HOME_MOTION.heroCopy}`}>
               先選影片或歌曲，再依照自己的程度開始學。每天看一點、聽一點，慢慢累積日文語感。
             </p>
-            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+            <div className={`mt-9 flex flex-col gap-4 sm:flex-row ${HOME_MOTION.heroActions}`}>
               <a href="#study-switch" onClick={() => switchStudyMode("videos")}>
                 <Button className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
                   開始影片學習
@@ -261,14 +262,14 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="study-switch" className="relative border-b border-[#21392f]/15 bg-[#fff8e9] px-5 py-8 md:px-10 lg:px-16">
+      <section id="study-switch" className={`relative border-b border-[#21392f]/15 bg-[#fff8e9] px-5 py-8 md:px-10 lg:px-16 ${HOME_MOTION.switchSection}`}>
         <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.28em] text-[#b7442e]">Start Here</p>
             <h2 className="mt-2 font-serif text-3xl font-black tracking-[-0.03em] text-[#21392f] md:text-4xl">今天想怎麼學日文？</h2>
             <p className="mt-3 text-sm leading-6 text-[#314a40] md:text-base">想看教學影片，或想用歌曲練習，都可以從這裡開始。</p>
           </div>
-          <Tabs value={activeStudyMode} onValueChange={(value) => switchStudyMode(value as StudyMode)} className="w-full">
+          <Tabs value={activeStudyMode} onValueChange={(value) => switchStudyMode(value as StudyMode)} className={`w-full ${HOME_MOTION.switchTabs}`}>
             <TabsList className="grid h-auto w-full grid-cols-1 gap-3 rounded-none bg-transparent p-0 sm:grid-cols-2">
               {STUDY_MODE_OPTIONS.map((option) => {
                 const Icon = option.value === "videos" ? Video : Music2;
@@ -359,7 +360,7 @@ export default function Home() {
             </aside>
 
             <div className="space-y-8">
-              <div className="grid gap-5 rounded-none border-2 border-[#21392f] bg-[#fff7e6] p-4 shadow-[10px_10px_0_#24628f] lg:grid-cols-[1.1fr_0.9fr]">
+              <div className={`grid gap-5 rounded-none border-2 border-[#21392f] bg-[#fff7e6] p-4 shadow-[10px_10px_0_#24628f] lg:grid-cols-[1.1fr_0.9fr] ${HOME_MOTION.videoPanel}`}>
                 <div className="aspect-video overflow-hidden border border-[#21392f]/30 bg-[#21392f]">
                   <iframe
                     key={selectedVideo.id}
@@ -406,7 +407,7 @@ export default function Home() {
                 ))}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className={`grid gap-4 md:grid-cols-2 xl:grid-cols-3 ${HOME_MOTION.videoGrid}`}>
                 {filteredVideos.map((video) => (
                   <article
                     key={`${video.custom ? "custom" : "seed"}-${video.id}`}
@@ -518,7 +519,7 @@ export default function Home() {
               <p className="mt-4 max-w-2xl text-base leading-7 text-[#314a40]">請改選其他歌手或難度，或按「重設篩選」回到完整歌曲清單。</p>
             </div>
           ) : selectedSong ? (
-            <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className={`grid gap-8 lg:grid-cols-[1.05fr_0.95fr] ${HOME_MOTION.songPanel}`}>
               <div className="border-2 border-[#f4ecd8] bg-[#fff7e6] p-4 text-[#21392f] shadow-[10px_10px_0_#b7442e]">
                 <div className="aspect-video overflow-hidden border border-[#21392f]/30 bg-[#21392f]">
                   <iframe key={selectedSong.id} className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${selectedSong.id}`} title={selectedSong.title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
@@ -543,7 +544,7 @@ export default function Home() {
                   <h4 className="font-serif text-2xl font-black">歌詞與版權備註</h4>
                   <p className="mt-3 text-sm leading-6 text-[#314a40]">{selectedSong.lyricsNote}</p>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+                <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-1 ${HOME_MOTION.songNotes}`}>
                   <div className="border border-[#f4ecd8]/30 bg-[#fff8e9] p-5 text-[#21392f]"><h4 className="font-black text-[#b7442e]">單字重點</h4><p className="mt-2 text-sm leading-6 text-[#314a40]">{selectedSong.vocabularyNotes}</p></div>
                   <div className="border border-[#f4ecd8]/30 bg-[#fff8e9] p-5 text-[#21392f]"><h4 className="font-black text-[#b7442e]">文法重點</h4><p className="mt-2 text-sm leading-6 text-[#314a40]">{selectedSong.grammarNotes}</p></div>
                   <div className="border border-[#f4ecd8]/30 bg-[#fff8e9] p-5 text-[#21392f]"><h4 className="font-black text-[#b7442e]">聽力練習</h4><p className="mt-2 text-sm leading-6 text-[#314a40]">{selectedSong.listeningPrompt}</p></div>
@@ -553,7 +554,7 @@ export default function Home() {
           ) : null}
 
           {filteredSongs.length > 0 ? (
-            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className={`mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3 ${HOME_MOTION.songGrid}`}>
               {filteredSongs.map((song) => (
                 <button key={song.id} type="button" onClick={() => setSelectedSongId(song.id)} className={`border-2 p-5 text-left transition ${selectedSong?.id === song.id ? "border-[#f1b35b] bg-[#f8f0de] text-[#21392f] shadow-[7px_7px_0_#f1b35b]" : "border-[#f4ecd8]/25 bg-[#fff8e9]/10 text-[#fff7e6] hover:-translate-y-1 hover:border-[#f4ecd8]"}`}>
                   <span className="inline-flex items-center gap-2 bg-[#b7442e] px-3 py-1 text-sm font-black text-[#fff7e6]"><Music2 className="h-4 w-4" /> {song.level}</span>
@@ -582,7 +583,7 @@ export default function Home() {
         </div>
       </footer>
 
-      <nav aria-label="手機快速切換學習內容" className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-[#21392f] bg-[#f8f0de]/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-6px_0_rgba(33,57,47,0.10)] backdrop-blur md:hidden">
+      <nav aria-label="手機快速切換學習內容" className={`fixed inset-x-0 bottom-0 z-50 border-t-2 border-[#21392f] bg-[#f8f0de]/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-6px_0_rgba(33,57,47,0.10)] backdrop-blur md:hidden ${HOME_MOTION.mobileSwitcher}`}>
         <div className="mx-auto grid max-w-md grid-cols-2 gap-3">
           {STUDY_MODE_OPTIONS.map((option) => {
             const Icon = option.value === "videos" ? Video : Music2;
