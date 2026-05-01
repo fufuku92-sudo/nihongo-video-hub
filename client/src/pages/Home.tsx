@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { BookOpen, ExternalLink, Headphones, Map, PlayCircle, Plus, Search, ShieldCheck, Train, Trash2, Video } from "lucide-react";
+import { BookOpen, ExternalLink, Headphones, KeyRound, Lock, LogOut, Map, PlayCircle, Plus, Search, ShieldCheck, Train, Trash2, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -33,6 +33,8 @@ type FormState = {
 };
 
 const STORAGE_KEY = "nihongo-video-hub-custom-videos";
+const ADMIN_SESSION_KEY = "nihongo-video-hub-admin-unlocked";
+const ADMIN_PASSCODE = "nihongo-admin";
 const heroImage = "https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_hero_station_map-i92c2aVR2pcivx8nJA773U.webp";
 const ticketImage = "https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_ticket_cards-9MdMarHp8aRGqMYTv5me3J.webp";
 
@@ -127,10 +129,14 @@ export default function Home() {
   const [customVideos, setCustomVideos] = useState<VideoItem[]>([]);
   const [selectedVideoId, setSelectedVideoId] = useState(seedVideos[0].id);
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [formMessage, setFormMessage] = useState("貼上 YouTube 連結後，系統會自動解析影片 ID。");
+  const [formMessage, setFormMessage] = useState("管理員解鎖後即可貼上 YouTube 連結並新增影片。");
+  const [adminPasscode, setAdminPasscode] = useState("");
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [adminMessage, setAdminMessage] = useState("一般訪客只能瀏覽影片；新增與刪除功能限管理員使用。");
 
   useEffect(() => {
     setCustomVideos(readCustomVideos());
+    setIsAdminUnlocked(window.sessionStorage.getItem(ADMIN_SESSION_KEY) === "true");
   }, []);
 
   const videos = useMemo(() => [...customVideos, ...seedVideos], [customVideos]);
@@ -161,8 +167,33 @@ export default function Home() {
     if (first) setSelectedVideoId(first.id);
   }
 
+  function handleAdminUnlock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (adminPasscode.trim() === ADMIN_PASSCODE) {
+      window.sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+      setIsAdminUnlocked(true);
+      setAdminPasscode("");
+      setAdminMessage("管理員模式已開啟；現在可以新增或刪除自訂影片。");
+      setFormMessage("貼上 YouTube 連結後，系統會自動解析影片 ID。");
+      return;
+    }
+    setAdminMessage("管理員代碼不正確，新增影片功能仍維持鎖定。");
+  }
+
+  function handleAdminLogout() {
+    window.sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    setIsAdminUnlocked(false);
+    setForm(emptyForm);
+    setFormMessage("管理員解鎖後即可貼上 YouTube 連結並新增影片。");
+    setAdminMessage("已離開管理員模式；一般訪客只能瀏覽影片。");
+  }
+
   function handleAddVideo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isAdminUnlocked) {
+      setFormMessage("請先以管理員模式解鎖，才能新增影片。");
+      return;
+    }
     const id = extractYouTubeId(form.url);
     if (!id) {
       setFormMessage("找不到影片 ID。請貼上 YouTube 影片網址、Shorts 網址、嵌入網址，或直接貼影片 ID。");
@@ -193,6 +224,10 @@ export default function Home() {
   }
 
   function removeCustomVideo(id: string) {
+    if (!isAdminUnlocked) {
+      setFormMessage("請先以管理員模式解鎖，才能刪除自訂影片。");
+      return;
+    }
     const next = customVideos.filter((video) => video.id !== id);
     setCustomVideos(next);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -221,7 +256,7 @@ export default function Home() {
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <a href="#catalog" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#21392f] transition hover:-translate-y-0.5">影片月台</a>
-            <a href="#manage" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#24628f] transition hover:-translate-y-0.5">新增影片</a>
+            <a href="#manage" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#24628f] transition hover:-translate-y-0.5">管理員入口</a>
           </div>
         </nav>
 
@@ -235,7 +270,7 @@ export default function Home() {
               從 N5 到 N1，沿著日語學習路線前進。
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-[#314a40] md:text-xl">
-              這裡把日文學習影片依 JLPT 級別與主題整理成路線圖。你可以先看精選清單，也可以在下方管理區自己貼上 YouTube 影片，逐步做成自己的日文學習庫。
+              這裡把日文學習影片依 JLPT 級別與主題整理成路線圖。一般使用者可以瀏覽與篩選影片；新增與刪除影片則限定管理員操作。
             </p>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <a href="#catalog">
@@ -244,7 +279,7 @@ export default function Home() {
                 </Button>
               </a>
               <a href="#manage" className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
-                自己新增影片
+                管理員新增影片
               </a>
             </div>
           </div>
@@ -259,7 +294,7 @@ export default function Home() {
               <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">選擇你的 JLPT 月台</h2>
             </div>
             <p className="max-w-3xl text-base leading-7 text-[#314a40]">
-              目前預設收錄 {seedVideos.length} 支影片，另可加入你自己的影片。篩選時會把預設影片與自訂影片合併顯示。
+              目前預設收錄 {seedVideos.length} 支影片。管理員新增的影片會與預設影片合併顯示，一般訪客只會看到整理好的學習清單。
             </p>
           </div>
 
@@ -357,71 +392,104 @@ export default function Home() {
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div>
             <p className="mb-3 text-sm font-black uppercase tracking-[0.32em] text-[#e6b14a]">Video Manager</p>
-            <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-5xl">自己把影片放進去。</h2>
+            <h2 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-5xl">管理員新增影片。</h2>
             <p className="mt-5 max-w-xl text-base leading-8 text-[#fff7e6]/80">
-              這個管理區先做成本機版後台：你貼上 YouTube 連結、選擇 N5 到 N1 與主題，影片就會加入清單。資料會存在目前瀏覽器，適合先整理自己的學習庫。
+              這個區塊已改成管理員入口。一般訪客只能瀏覽影片；管理員解鎖後，才可以貼上 YouTube 連結、選擇 N5 到 N1 與主題，並把影片加入清單。
             </p>
             <img src={ticketImage} alt="JLPT 分級票券插畫" className="mt-8 hidden w-full border border-[#fff7e6]/20 shadow-[12px_12px_0_#b7442e] lg:block" />
           </div>
 
           <div className="border-2 border-[#fff7e6] bg-[#f8f0de] p-5 text-[#21392f] shadow-[10px_10px_0_#b7442e] md:p-7">
-            <form onSubmit={handleAddVideo} className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">YouTube 連結或影片 ID</label>
-                <input value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="https://www.youtube.com/watch?v=..." />
-              </div>
-              <div className="grid gap-5 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">JLPT 級別</label>
-                  <select value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value as Level })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]">
-                    {levels.map((item) => <option key={item.level} value={item.level}>{item.level}｜{item.label}</option>)}
-                  </select>
+            {!isAdminUnlocked ? (
+              <form onSubmit={handleAdminUnlock} className="space-y-5">
+                <div className="flex items-start gap-4 border border-[#21392f]/20 bg-[#fff8e9] p-5">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center border-2 border-[#21392f] bg-[#21392f] text-[#fff7e6] shadow-[4px_4px_0_#b7442e]">
+                    <Lock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-2xl font-black">管理員模式已鎖定</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#314a40]">請輸入管理員代碼後再新增或刪除影片。一般訪客不會看到新增影片表單，也不能修改影片庫。</p>
+                  </div>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">主題</label>
-                  <select value={form.topic} onChange={(event) => setForm({ ...form, topic: event.target.value as Topic })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]">
-                    {topics.filter((topic): topic is Topic => topic !== "全部").map((topic) => <option key={topic} value={topic}>{topic}</option>)}
-                  </select>
+                  <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">管理員代碼</label>
+                  <input type="password" value={adminPasscode} onChange={(event) => setAdminPasscode(event.target.value)} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="請輸入管理員代碼" autoComplete="current-password" />
                 </div>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">影片標題</label>
-                <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：N3 聽力逐句解析" />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">頻道名稱</label>
-                <input value={form.channel} onChange={(event) => setForm({ ...form, channel: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：Elsaの放送" />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">備註</label>
-                <textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} className="min-h-24 w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：適合考前複習，老師講解速度清楚。" />
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <Button type="submit" className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
-                  <Plus className="mr-2 h-4 w-4" /> 新增到影片庫
-                </Button>
-                <p className="text-sm font-semibold text-[#314a40]">{formMessage}</p>
-              </div>
-            </form>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <Button type="submit" className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
+                    <KeyRound className="mr-2 h-4 w-4" /> 解鎖管理員模式
+                  </Button>
+                  <p className="text-sm font-semibold text-[#314a40]">{adminMessage}</p>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className="mb-6 flex flex-col gap-3 border border-[#2f5d46]/30 bg-[#fff8e9] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-black text-[#2f5d46]">管理員模式使用中：可以新增與刪除自訂影片。</p>
+                  <button onClick={handleAdminLogout} className="inline-flex items-center justify-center gap-2 border border-[#21392f]/30 px-3 py-2 text-sm font-black transition hover:bg-[#21392f] hover:text-[#fff7e6]">
+                    <LogOut className="h-4 w-4" /> 離開管理員模式
+                  </button>
+                </div>
 
-            {customVideos.length > 0 && (
-              <div className="mt-8 border-t border-[#21392f]/20 pt-6">
-                <h3 className="mb-4 font-serif text-2xl font-black">你新增的影片</h3>
-                <div className="space-y-3">
-                  {customVideos.map((video) => (
-                    <div key={video.id} className="flex items-start justify-between gap-4 border border-[#21392f]/20 bg-[#fff8e9] p-4">
-                      <div>
-                        <p className="text-sm font-black text-[#b7442e]">{video.level}｜{video.topic}</p>
-                        <p className="mt-1 font-bold">{video.title}</p>
-                        <p className="mt-1 text-sm text-[#314a40]">{video.channel}</p>
-                      </div>
-                      <button onClick={() => removeCustomVideo(video.id)} className="border border-[#21392f]/30 p-2 text-[#b7442e] transition hover:bg-[#b7442e] hover:text-[#fff7e6]" aria-label="移除自訂影片">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                <form onSubmit={handleAddVideo} className="space-y-5">
+                  <div>
+                    <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">YouTube 連結或影片 ID</label>
+                    <input value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="https://www.youtube.com/watch?v=..." />
+                  </div>
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">JLPT 級別</label>
+                      <select value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value as Level })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]">
+                        {levels.map((item) => <option key={item.level} value={item.level}>{item.level}｜{item.label}</option>)}
+                      </select>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">主題</label>
+                      <select value={form.topic} onChange={(event) => setForm({ ...form, topic: event.target.value as Topic })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]">
+                        {topics.filter((topic): topic is Topic => topic !== "全部").map((topic) => <option key={topic} value={topic}>{topic}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">影片標題</label>
+                    <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：N3 聽力逐句解析" />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">頻道名稱</label>
+                    <input value={form.channel} onChange={(event) => setForm({ ...form, channel: event.target.value })} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：Elsaの放送" />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">備註</label>
+                    <textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} className="min-h-24 w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：適合考前複習，老師講解速度清楚。" />
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <Button type="submit" className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
+                      <Plus className="mr-2 h-4 w-4" /> 新增到影片庫
+                    </Button>
+                    <p className="text-sm font-semibold text-[#314a40]">{formMessage}</p>
+                  </div>
+                </form>
+
+                {customVideos.length > 0 && (
+                  <div className="mt-8 border-t border-[#21392f]/20 pt-6">
+                    <h3 className="mb-4 font-serif text-2xl font-black">管理員新增的影片</h3>
+                    <div className="space-y-3">
+                      {customVideos.map((video) => (
+                        <div key={video.id} className="flex items-start justify-between gap-4 border border-[#21392f]/20 bg-[#fff8e9] p-4">
+                          <div>
+                            <p className="text-sm font-black text-[#b7442e]">{video.level}｜{video.topic}</p>
+                            <p className="mt-1 font-bold">{video.title}</p>
+                            <p className="mt-1 text-sm text-[#314a40]">{video.channel}</p>
+                          </div>
+                          <button onClick={() => removeCustomVideo(video.id)} className="border border-[#21392f]/30 p-2 text-[#b7442e] transition hover:bg-[#b7442e] hover:text-[#fff7e6]" aria-label="移除自訂影片">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
