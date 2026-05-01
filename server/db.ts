@@ -1,6 +1,6 @@
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertSong, InsertUser, InsertVideo, songs, users, videos } from "../drizzle/schema";
+import { InsertPageView, InsertSong, InsertUser, InsertVideo, pageViews, songs, users, videos } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -272,4 +272,31 @@ export async function deleteSongByYoutubeId(youtubeId: string) {
 
   await db.delete(songs).where(eq(songs.youtubeId, youtubeId));
   return { success: true } as const;
+}
+
+export async function recordPageView(pageView: InsertPageView) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot record page view: database not available");
+    return { success: false, totalViews: 0 } as const;
+  }
+
+  await db.insert(pageViews).values({
+    path: pageView.path || "/",
+    userAgent: pageView.userAgent ?? null,
+  });
+
+  const stats = await getPageViewStats();
+  return { success: true, totalViews: stats.totalViews } as const;
+}
+
+export async function getPageViewStats() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get page view stats: database not available");
+    return { totalViews: 0 } as const;
+  }
+
+  const result = await db.select({ totalViews: count() }).from(pageViews);
+  return { totalViews: Number(result[0]?.totalViews ?? 0) } as const;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -109,8 +109,16 @@ export default function Home() {
     applySeoMetadata(HOME_SEO);
   }, []);
 
+  const utils = trpc.useUtils();
   const { data: databaseVideos = [] } = trpc.videos.list.useQuery();
   const { data: databaseSongs = [] } = trpc.songs.list.useQuery();
+  const { data: analyticsStats } = trpc.analytics.stats.useQuery();
+  const hasRecordedVisit = useRef(false);
+  const recordPageView = trpc.analytics.recordPageView.useMutation({
+    onSuccess: (data) => {
+      utils.analytics.stats.setData(undefined, { totalViews: data.totalViews });
+    },
+  });
 
   const [activeStudyMode, setActiveStudyMode] = useState<StudyMode>("videos");
   const [activeLevel, setActiveLevel] = useState<Level>("N5");
@@ -119,6 +127,18 @@ export default function Home() {
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [activeSongArtist, setActiveSongArtist] = useState(ALL_SONG_ARTISTS);
   const [activeSongLevel, setActiveSongLevel] = useState<SongFilterLevel>(ALL_SONG_LEVELS);
+  const totalViews = analyticsStats?.totalViews ?? recordPageView.data?.totalViews ?? 0;
+
+  useEffect(() => {
+    if (hasRecordedVisit.current) return;
+    hasRecordedVisit.current = true;
+
+    const visitSessionKey = "nihongo-video-hub-visit-recorded";
+    if (window.sessionStorage.getItem(visitSessionKey) === "true") return;
+
+    window.sessionStorage.setItem(visitSessionKey, "true");
+    recordPageView.mutate({ path: window.location.pathname || "/" });
+  }, []);
 
   const customVideos = useMemo<VideoItem[]>(() => {
     return databaseVideos.map((video) => ({
@@ -230,17 +250,21 @@ export default function Home() {
               <p className="text-sm tracking-wide text-[#21392f]/70">影片與歌曲的日文學習入口</p>
             </div>
           </div>
-          <div className="hidden items-center gap-3 md:flex">
-            <a href="#study-switch" onClick={() => switchStudyMode("videos")} className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#21392f] transition hover:-translate-y-0.5">影片學習</a>
-            <a href="#study-switch" onClick={() => switchStudyMode("songs")} className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#b7442e] transition hover:-translate-y-0.5">日文歌曲</a>
+          <div className="hidden border border-[#21392f]/25 bg-[#f8f0de]/80 px-4 py-2 text-sm font-bold tracking-wide text-[#314a40] shadow-[3px_3px_0_#21392f] md:block">
+            免費日文學習整理
           </div>
         </nav>
 
         <div className="relative z-10 grid min-h-[calc(100vh-96px)] items-center px-5 pb-16 md:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-16">
           <div className="max-w-3xl pt-10 lg:pt-0">
-            <div className={`mb-8 inline-flex items-center gap-2 border border-[#21392f]/25 bg-[#f8f0de]/90 px-3 py-2 text-sm font-semibold shadow-[3px_3px_0_#24628f] ${HOME_MOTION.heroBadge}`}>
-              <ShieldCheck className="h-4 w-4 text-[#2f5d46]" />
-              JLPT N5–N1 學習入口
+            <div className={`mb-8 flex flex-wrap gap-3 ${HOME_MOTION.heroBadge}`}>
+              <span className="inline-flex items-center gap-2 border border-[#21392f]/25 bg-[#f8f0de]/90 px-3 py-2 text-sm font-semibold shadow-[3px_3px_0_#24628f]">
+                <ShieldCheck className="h-4 w-4 text-[#2f5d46]" />
+                JLPT N5–N1 學習入口
+              </span>
+              <span className="inline-flex items-center gap-2 border border-[#21392f]/25 bg-[#f8f0de]/90 px-3 py-2 text-sm font-semibold shadow-[3px_3px_0_#b7442e]">
+                累計網站人次：{totalViews.toLocaleString("zh-TW")}
+              </span>
             </div>
             <h1 className={`font-serif text-5xl font-black leading-[0.95] tracking-[-0.04em] text-[#21392f] md:text-7xl lg:text-8xl ${HOME_MOTION.heroTitle}`}>
               從 N5 到 N1，沿著日語學習路線前進。
@@ -262,36 +286,34 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="study-switch" className={`relative border-b border-[#21392f]/15 bg-[#fff8e9] px-5 py-8 md:px-10 lg:px-16 ${HOME_MOTION.switchSection}`}>
-        <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.28em] text-[#b7442e]">Start Here</p>
-            <h2 className="mt-2 font-serif text-3xl font-black tracking-[-0.03em] text-[#21392f] md:text-4xl">今天想怎麼學日文？</h2>
-            <p className="mt-3 text-sm leading-6 text-[#314a40] md:text-base">想看教學影片，或想用歌曲練習，都可以從這裡開始。</p>
-          </div>
-          <Tabs value={activeStudyMode} onValueChange={(value) => switchStudyMode(value as StudyMode)} className={`w-full ${HOME_MOTION.switchTabs}`}>
-            <TabsList className="grid h-auto w-full grid-cols-1 gap-3 rounded-none bg-transparent p-0 sm:grid-cols-2">
-              {STUDY_MODE_OPTIONS.map((option) => {
-                const Icon = option.value === "videos" ? Video : Music2;
-                const activeClass = option.accent === "ink" ? "border-[#21392f] shadow-[6px_6px_0_#21392f] data-[state=active]:bg-[#21392f]" : "border-[#b7442e] shadow-[6px_6px_0_#b7442e] data-[state=active]:bg-[#b7442e]";
-                return (
-                  <TabsTrigger key={option.value} value={option.value} className={`min-h-24 rounded-none border-2 bg-[#f8f0de] p-4 text-left data-[state=active]:text-[#fff7e6] ${HOME_MOTION.switchTrigger} ${activeClass}`}>
-                    <span className="flex w-full items-start gap-3">
-                      <Icon className="mt-1 h-5 w-5 shrink-0" />
-                      <span>
-                        <span className="block text-lg font-black">{option.label}</span>
-                        <span className="mt-1 block text-sm font-medium leading-5 opacity-80">{option.description}</span>
+      <section id="study-switch" className="relative border-b border-[#21392f]/15 bg-[#fff8e9]">
+        <div className={`mx-auto flex max-w-7xl flex-col gap-5 px-5 pt-10 md:px-10 lg:px-16 ${HOME_MOTION.switchSection}`}>
+          <div className="grid gap-5 border-2 border-[#21392f] bg-[#f8f0de] p-4 shadow-[8px_8px_0_#24628f] lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-[#b7442e]">Study Mode</p>
+              <h2 className="mt-2 font-serif text-3xl font-black tracking-[-0.03em] text-[#21392f] md:text-4xl">選一種方式開始</h2>
+              <p className="mt-3 text-sm leading-6 text-[#314a40] md:text-base">首頁只保留「影片學習」與「日文歌曲」兩個主要入口，切換後直接看內容。</p>
+            </div>
+            <Tabs value={activeStudyMode} onValueChange={(value) => switchStudyMode(value as StudyMode)} className={`w-full ${HOME_MOTION.switchTabs}`}>
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-3 rounded-none bg-transparent p-0">
+                {STUDY_MODE_OPTIONS.map((option) => {
+                  const Icon = option.value === "videos" ? Video : Music2;
+                  const activeClass = option.accent === "ink" ? "border-[#21392f] shadow-[5px_5px_0_#21392f] data-[state=active]:bg-[#21392f]" : "border-[#b7442e] shadow-[5px_5px_0_#b7442e] data-[state=active]:bg-[#b7442e]";
+                  return (
+                    <TabsTrigger key={option.value} value={option.value} className={`min-h-16 rounded-none border-2 bg-[#fff8e9] p-3 text-left data-[state=active]:text-[#fff7e6] ${HOME_MOTION.switchTrigger} ${activeClass}`}>
+                      <span className="flex w-full items-center gap-3">
+                        <Icon className="h-5 w-5 shrink-0" />
+                        <span className="block text-base font-black md:text-lg">{option.label}</span>
                       </span>
-                    </span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
-      </section>
 
-      <div className={HOME_MOTION.tabViewport} aria-live="polite">
+        <div className={HOME_MOTION.tabViewport} aria-live="polite">
       {activeStudyMode === "videos" ? (
       <section key="videos-tab-panel" id="catalog" className={`relative px-5 py-16 md:px-10 lg:px-16 ${HOME_MOTION.videoTabPanel}`}>
         <div className="mx-auto max-w-7xl">
@@ -569,7 +591,8 @@ export default function Home() {
         </div>
       </section>
       ) : null}
-      </div>
+        </div>
+      </section>
 
       <footer className="px-5 py-8 text-sm leading-6 text-[#314a40] md:px-10 lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-[#21392f]/15 pt-6 md:flex-row md:items-center md:justify-between">

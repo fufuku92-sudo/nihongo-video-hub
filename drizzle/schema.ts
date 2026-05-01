@@ -58,9 +58,18 @@ export const songs = mysqlTable("songs", {
     .references(() => users.id),
 });
 
+export const pageViews = mysqlTable("pageViews", {
+  id: int("id").autoincrement().primaryKey(),
+  path: varchar("path", { length: 255 }).default("/").notNull(),
+  userAgent: text("userAgent"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Video = typeof videos.$inferSelect;
 export type InsertVideo = typeof videos.$inferInsert;
 export type Song = typeof songs.$inferSelect;
 export type InsertSong = typeof songs.$inferInsert;
+export type PageView = typeof pageViews.$inferSelect;
+export type InsertPageView = typeof pageViews.$inferInsert;

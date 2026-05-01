@@ -29,6 +29,13 @@
       "when": 1777632975242,
       "tag": "0003_yummy_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1777646655200,
+      "tag": "0004_tough_surge",
+      "breakpoints": true
     }
   ]
 }

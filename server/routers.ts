@@ -65,6 +65,10 @@ const songUpdateSchema = editableSongFieldsSchema.extend({
   youtubeId: youtubeIdSchema,
 });
 
+const pageViewInputSchema = z.object({
+  path: z.string().trim().min(1).max(255).default("/"),
+});
+
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
@@ -108,6 +112,15 @@ export const appRouter = router({
         }),
       )
       .mutation(({ input }) => db.deleteVideoByYoutubeId(input.youtubeId)),
+  }),
+  analytics: router({
+    stats: publicProcedure.query(() => db.getPageViewStats()),
+    recordPageView: publicProcedure.input(pageViewInputSchema).mutation(({ ctx, input }) =>
+      db.recordPageView({
+        path: input.path,
+        userAgent: ctx.req.get("user-agent") || null,
+      }),
+    ),
   }),
   songs: router({
     list: publicProcedure.query(() => db.listSongs()),
