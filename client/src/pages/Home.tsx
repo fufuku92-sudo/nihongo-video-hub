@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ALL_SONG_ARTISTS, ALL_SONG_LEVELS, filterSongs, getSongArtists, type SongFilterLevel } from "@/lib/songFilters";
+import { STUDY_MODE_OPTIONS, type StudyMode } from "@/lib/studyNavigation";
 import { trpc } from "@/lib/trpc";
 import { BookOpen, ExternalLink, Headphones, Map, Music2, PlayCircle, Search, ShieldCheck, Train, Video } from "lucide-react";
 
@@ -104,6 +106,7 @@ export default function Home() {
   const { data: databaseVideos = [] } = trpc.videos.list.useQuery();
   const { data: databaseSongs = [] } = trpc.songs.list.useQuery();
 
+  const [activeStudyMode, setActiveStudyMode] = useState<StudyMode>("videos");
   const [activeLevel, setActiveLevel] = useState<Level>("N5");
   const [activeTopic, setActiveTopic] = useState<"全部" | Topic>("全部");
   const [selectedVideoId, setSelectedVideoId] = useState(seedVideos[0].id);
@@ -211,12 +214,12 @@ export default function Home() {
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#b7442e]">Nihongo Video Hub</p>
-              <p className="text-sm tracking-wide text-[#21392f]/70">JLPT 學習影片路線圖</p>
+              <p className="text-sm tracking-wide text-[#21392f]/70">影片與歌曲的日文學習入口</p>
             </div>
           </div>
           <div className="hidden items-center gap-3 md:flex">
-            <a href="#catalog" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#21392f] transition hover:-translate-y-0.5">影片月台</a>
-            <a href="#songs" className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#b7442e] transition hover:-translate-y-0.5">日文歌曲</a>
+            <a href="#study-switch" onClick={() => setActiveStudyMode("videos")} className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#21392f] transition hover:-translate-y-0.5">影片學習</a>
+            <a href="#study-switch" onClick={() => setActiveStudyMode("songs")} className="border border-[#21392f]/30 bg-[#f8f0de]/80 px-4 py-2 text-sm font-semibold tracking-wide shadow-[3px_3px_0_#b7442e] transition hover:-translate-y-0.5">日文歌曲</a>
           </div>
         </nav>
 
@@ -233,19 +236,49 @@ export default function Home() {
               這裡整理多個 YouTube 頻道提供的優質日文學習影片，依 JLPT 級別與主題做成免費學習路線圖。本站以非營利方式協助學習者快速找到適合內容，並將流量導回原影片與原作者。
             </p>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-              <a href="#catalog">
+              <a href="#study-switch" onClick={() => setActiveStudyMode("videos")}>
                 <Button className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
-                  開始查詢路線
+                  開始影片學習
                 </Button>
               </a>
-              <a href="#songs" className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
-                查看日文歌曲
+              <a href="#study-switch" onClick={() => setActiveStudyMode("songs")} className="inline-flex h-12 items-center justify-center border border-[#21392f]/30 bg-[#f8f0de] px-7 text-base font-bold text-[#21392f] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1">
+                用日文歌曲學習
               </a>
             </div>
           </div>
         </div>
       </section>
 
+      <section id="study-switch" className="relative border-b border-[#21392f]/15 bg-[#fff8e9] px-5 py-8 md:px-10 lg:px-16">
+        <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-[#b7442e]">Choose Your Platform</p>
+            <h2 className="mt-2 font-serif text-3xl font-black tracking-[-0.03em] text-[#21392f] md:text-4xl">今天想怎麼學日文？</h2>
+            <p className="mt-3 text-sm leading-6 text-[#314a40] md:text-base">先選學習方式，再進入對應內容；手機上不需要一路滑到底，也不會一次看到太多分類按鈕。</p>
+          </div>
+          <Tabs value={activeStudyMode} onValueChange={(value) => setActiveStudyMode(value as StudyMode)} className="w-full">
+            <TabsList className="grid h-auto w-full grid-cols-1 gap-3 rounded-none bg-transparent p-0 sm:grid-cols-2">
+              {STUDY_MODE_OPTIONS.map((option) => {
+                const Icon = option.value === "videos" ? Video : Music2;
+                const activeClass = option.accent === "ink" ? "border-[#21392f] shadow-[6px_6px_0_#21392f] data-[state=active]:bg-[#21392f]" : "border-[#b7442e] shadow-[6px_6px_0_#b7442e] data-[state=active]:bg-[#b7442e]";
+                return (
+                  <TabsTrigger key={option.value} value={option.value} className={`min-h-24 rounded-none border-2 bg-[#f8f0de] p-4 text-left data-[state=active]:text-[#fff7e6] ${activeClass}`}>
+                    <span className="flex w-full items-start gap-3">
+                      <Icon className="mt-1 h-5 w-5 shrink-0" />
+                      <span>
+                        <span className="block text-lg font-black">{option.label}</span>
+                        <span className="mt-1 block text-sm font-medium leading-5 opacity-80">{option.description}</span>
+                      </span>
+                    </span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
+        </div>
+      </section>
+
+      {activeStudyMode === "videos" ? (
       <section id="catalog" className="relative px-5 py-16 md:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
@@ -258,8 +291,40 @@ export default function Home() {
             </p>
           </div>
 
+
+          <div className="mb-8 border-2 border-[#21392f] bg-[#fff7e6] p-4 shadow-[7px_7px_0_#24628f] lg:hidden">
+            <p className="mb-4 text-sm font-black tracking-[0.18em] text-[#b7442e]">快速篩選影片</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#314a40]/80">JLPT 級別</span>
+                <select
+                  value={activeLevel}
+                  onChange={(event) => switchLevel(event.target.value as Level)}
+                  className="h-12 w-full rounded-none border-2 border-[#21392f]/30 bg-[#f8f0de] px-4 text-base font-black text-[#21392f] outline-none focus:border-[#b7442e]"
+                >
+                  {levels.map((item) => (
+                    <option key={item.level} value={item.level}>{item.level}｜{item.label}（{countsByLevel[item.level]} 支）</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#314a40]/80">主題</span>
+                <select
+                  value={activeTopic}
+                  onChange={(event) => switchTopic(event.target.value as "全部" | Topic)}
+                  className="h-12 w-full rounded-none border-2 border-[#21392f]/30 bg-[#f8f0de] px-4 text-base font-black text-[#21392f] outline-none focus:border-[#b7442e]"
+                >
+                  {topics.map((topic) => (
+                    <option key={topic} value={topic}>{topic === "全部" ? "全部主題" : topic}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <p className="mt-4 border-t border-[#21392f]/15 pt-3 text-sm font-bold text-[#314a40]">目前顯示 {activeLevel}・{activeTopic === "全部" ? "全部主題" : activeTopic}，共 {filteredVideos.length} 支影片。</p>
+          </div>
+
           <div className="grid gap-10 lg:grid-cols-[320px_1fr]">
-            <aside className="relative">
+            <aside className="relative hidden lg:block">
               <div className="sticky top-6 space-y-3">
                 {levels.map((item, index) => (
                   <button
@@ -317,7 +382,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden flex-wrap gap-2 lg:flex">
                 {topics.map((topic) => (
                   <button
                     key={topic}
@@ -363,8 +428,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+      ) : null}
 
 
+      {activeStudyMode === "songs" ? (
       <section id="songs" className="relative border-y border-[#21392f]/15 bg-[#21392f] px-5 py-16 text-[#fff7e6] md:px-10 lg:px-16">
         <div className="absolute inset-0 bg-[url('https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_paper_pattern-2qjVZvdvYrMsj2KwtsxgWV.webp')] bg-cover bg-center opacity-10" />
         <div className="relative z-10 mx-auto max-w-7xl">
@@ -487,6 +554,7 @@ export default function Home() {
           ) : null}
         </div>
       </section>
+      ) : null}
 
       <footer className="px-5 py-8 text-sm leading-6 text-[#314a40] md:px-10 lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-[#21392f]/15 pt-6 md:flex-row md:items-center md:justify-between">

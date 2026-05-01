@@ -8,8 +8,19 @@ export type SongFilterItem = {
 export const ALL_SONG_ARTISTS = "全部歌手";
 export const ALL_SONG_LEVELS: SongFilterLevel = "全部難度";
 
+function startsWithLatin(text: string) {
+  return /^[A-Za-z0-9]/.test(text);
+}
+
 export function getSongArtists<TSong extends SongFilterItem>(songs: TSong[]) {
-  return Array.from(new Set(songs.map((song) => song.artist).filter(Boolean))).sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  return Array.from(new Set(songs.map((song) => song.artist).filter(Boolean))).sort((a, b) => {
+    const aLatin = startsWithLatin(a);
+    const bLatin = startsWithLatin(b);
+
+    if (aLatin !== bLatin) return aLatin ? -1 : 1;
+
+    return a.localeCompare(b, aLatin ? "en" : "zh-Hant");
+  });
 }
 
 export function filterSongs<TSong extends SongFilterItem>(songs: TSong[], artist: string, level: SongFilterLevel) {
