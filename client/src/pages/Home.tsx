@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ALL_SONG_ARTISTS, ALL_SONG_LEVELS, filterSongs, getSongArtists, type SongFilterLevel } from "@/lib/songFilters";
+import { HOME_SEO, applySeoMetadata } from "@/lib/seo";
 import { STUDY_MODE_OPTIONS, type StudyMode } from "@/lib/studyNavigation";
 import { trpc } from "@/lib/trpc";
 import { BookOpen, ExternalLink, Headphones, Map, Music2, PlayCircle, Search, ShieldCheck, Train, Video } from "lucide-react";
@@ -103,6 +104,10 @@ function filteredVideoFallback(videos: VideoItem[], activeLevel: Level, activeTo
 }
 
 export default function Home() {
+  useEffect(() => {
+    applySeoMetadata(HOME_SEO);
+  }, []);
+
   const { data: databaseVideos = [] } = trpc.videos.list.useQuery();
   const { data: databaseSongs = [] } = trpc.songs.list.useQuery();
 
