@@ -312,6 +312,9 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-[#21392f]/15 pt-6 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-2">
             <p className="font-bold">Nihongo Video Hub｜免費、非營利的 YouTube 日文學習影片整合平台。</p>
+            <a href="/sources" className="w-fit font-bold text-[#b7442e] underline-offset-4 transition hover:text-[#8f2f1f] hover:underline">
+              來源聲明
+            </a>
           </div>
           <p className="max-w-2xl text-[#314a40]/75">
             感謝各 YouTube 頻道與創作者提供公開且實用的日文學習資源。本站不下載、不重新上傳，也不販售內容；僅整理影片資訊並導向原頁觀看，希望協助學習者找到好內容，同時增加原創作者的曝光。
