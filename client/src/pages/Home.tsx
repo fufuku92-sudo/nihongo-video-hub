@@ -1,6 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { BookOpen, ExternalLink, Headphones, KeyRound, Lock, LogOut, Map, PlayCircle, Plus, Search, ShieldCheck, Train, Trash2, Video } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
+import { BookOpen, ExternalLink, Headphones, Lock, LogOut, Map, PlayCircle, Plus, Search, ShieldCheck, Train, Trash2, Video } from "lucide-react";
 
 /**
  * Design Reminder — 昭和現代主義與日本公共資訊設計：
@@ -32,9 +35,6 @@ type FormState = {
   note: string;
 };
 
-const STORAGE_KEY = "nihongo-video-hub-custom-videos";
-const ADMIN_SESSION_KEY = "nihongo-video-hub-admin-unlocked";
-const ADMIN_PASSCODE = "nihongo-admin";
 const heroImage = "https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_hero_station_map-i92c2aVR2pcivx8nJA773U.webp";
 const ticketImage = "https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_ticket_cards-9MdMarHp8aRGqMYTv5me3J.webp";
 
@@ -96,6 +96,12 @@ function topicIcon(topic: Topic) {
   return <Video className="h-4 w-4" />;
 }
 
+
+function filteredVideoFallback(videos: VideoItem[], activeLevel: Level, activeTopic: "全部" | Topic) {
+  const preferred = videos.find((video) => video.level === activeLevel && (activeTopic === "全部" || video.topic === activeTopic));
+  return preferred?.id ?? videos[0]?.id ?? seedVideos[0].id;
+}
+
 function extractYouTubeId(input: string) {
   const trimmed = input.trim();
   const patterns = [
@@ -112,34 +118,64 @@ function extractYouTubeId(input: string) {
   return "";
 }
 
-function readCustomVideos(): VideoItem[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as VideoItem[];
-    return Array.isArray(parsed) ? parsed.filter((item) => item.id && item.title && item.level && item.topic) : [];
-  } catch {
-    return [];
-  }
-}
-
 export default function Home() {
+  const { user, loading: authLoading, isAuthenticated, logout } = useAuth();
+  const utils = trpc.useUtils();
+  const { data: databaseVideos = [], isLoading: videosLoading } = trpc.videos.list.useQuery();
+  const addVideoMutation = trpc.videos.add.useMutation({
+    onSuccess: async (video) => {
+      await utils.videos.list.invalidate();
+      if (video) {
+        setActiveLevel(video.level as Level);
+        setActiveTopic("全部");
+        setSelectedVideoId(video.youtubeId);
+      }
+      setForm(emptyForm);
+      setFormMessage("已新增到資料庫。重新登入或換裝置後仍會看到這支影片。");
+    },
+    onError: (mutationError) => {
+      setFormMessage(mutationError.message || "新增失敗，請確認你已登入且具有管理員權限。");
+    },
+  });
+  const deleteVideoMutation = trpc.videos.delete.useMutation({
+    onSuccess: async (_result, variables) => {
+      await utils.videos.list.invalidate();
+      if (selectedVideoId === variables.youtubeId) setSelectedVideoId(seedVideos[0].id);
+      setFormMessage("已從資料庫移除自訂影片。預設影片不會被刪除。");
+    },
+    onError: (mutationError) => {
+      setFormMessage(mutationError.message || "刪除失敗，請確認你已登入且具有管理員權限。");
+    },
+  });
+
   const [activeLevel, setActiveLevel] = useState<Level>("N5");
   const [activeTopic, setActiveTopic] = useState<"全部" | Topic>("全部");
-  const [customVideos, setCustomVideos] = useState<VideoItem[]>([]);
   const [selectedVideoId, setSelectedVideoId] = useState(seedVideos[0].id);
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [formMessage, setFormMessage] = useState("管理員解鎖後即可貼上 YouTube 連結並新增影片。");
-  const [adminPasscode, setAdminPasscode] = useState("");
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
-  const [adminMessage, setAdminMessage] = useState("一般訪客只能瀏覽影片；新增與刪除功能限管理員使用。");
+  const [formMessage, setFormMessage] = useState("請以管理員帳號登入後新增或刪除自訂影片。資料會同步到資料庫。");
 
-  useEffect(() => {
-    setCustomVideos(readCustomVideos());
-    setIsAdminUnlocked(window.sessionStorage.getItem(ADMIN_SESSION_KEY) === "true");
-  }, []);
+  const customVideos = useMemo<VideoItem[]>(() => {
+    return databaseVideos.map((video) => ({
+      id: video.youtubeId,
+      title: video.title,
+      channel: video.channel,
+      level: video.level as Level,
+      topic: video.topic as Topic,
+      reason: video.reason || "由管理員新增的學習影片。",
+      confidence: "自訂",
+      custom: true,
+    }));
+  }, [databaseVideos]);
 
   const videos = useMemo(() => [...customVideos, ...seedVideos], [customVideos]);
+  const isAdmin = user?.role === "admin";
+  const isMutating = addVideoMutation.isPending || deleteVideoMutation.isPending;
+
+  useEffect(() => {
+    if (!videos.some((video) => video.id === selectedVideoId)) {
+      setSelectedVideoId(filteredVideoFallback(videos, activeLevel, activeTopic));
+    }
+  }, [activeLevel, activeTopic, selectedVideoId, videos]);
 
   const countsByLevel = useMemo(() => {
     return levels.reduce<Record<Level, number>>((acc, item) => {
@@ -167,31 +203,20 @@ export default function Home() {
     if (first) setSelectedVideoId(first.id);
   }
 
-  function handleAdminUnlock(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (adminPasscode.trim() === ADMIN_PASSCODE) {
-      window.sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
-      setIsAdminUnlocked(true);
-      setAdminPasscode("");
-      setAdminMessage("管理員模式已開啟；現在可以新增或刪除自訂影片。");
-      setFormMessage("貼上 YouTube 連結後，系統會自動解析影片 ID。");
-      return;
-    }
-    setAdminMessage("管理員代碼不正確，新增影片功能仍維持鎖定。");
+  function handleLogin() {
+    window.location.href = getLoginUrl();
   }
 
-  function handleAdminLogout() {
-    window.sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    setIsAdminUnlocked(false);
+  function handleLogout() {
+    logout();
     setForm(emptyForm);
-    setFormMessage("管理員解鎖後即可貼上 YouTube 連結並新增影片。");
-    setAdminMessage("已離開管理員模式；一般訪客只能瀏覽影片。");
+    setFormMessage("已登出。請以管理員帳號登入後再新增或刪除影片。");
   }
 
   function handleAddVideo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!isAdminUnlocked) {
-      setFormMessage("請先以管理員模式解鎖，才能新增影片。");
+    if (!isAdmin) {
+      setFormMessage(isAuthenticated ? "此帳號不是管理員，無法新增影片。" : "請先登入管理員帳號，才能新增影片。");
       return;
     }
     const id = extractYouTubeId(form.url);
@@ -203,36 +228,22 @@ export default function Home() {
       setFormMessage("請填寫影片標題，這樣之後比較好搜尋與辨識。");
       return;
     }
-    const newVideo: VideoItem = {
-      id,
+    addVideoMutation.mutate({
+      youtubeId: id,
       title: form.title.trim(),
       channel: form.channel.trim() || "自訂來源",
       level: form.level,
       topic: form.topic,
-      reason: form.note.trim() || "由你手動加入的學習影片。",
-      confidence: "自訂",
-      custom: true,
-    };
-    const next = [newVideo, ...customVideos.filter((video) => video.id !== id)];
-    setCustomVideos(next);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    setActiveLevel(newVideo.level);
-    setActiveTopic("全部");
-    setSelectedVideoId(newVideo.id);
-    setForm(emptyForm);
-    setFormMessage("已新增影片。它會保存在這個瀏覽器中，並立刻出現在對應級別。 ");
+      reason: form.note.trim() || "由管理員新增的學習影片。",
+    });
   }
 
   function removeCustomVideo(id: string) {
-    if (!isAdminUnlocked) {
-      setFormMessage("請先以管理員模式解鎖，才能刪除自訂影片。");
+    if (!isAdmin) {
+      setFormMessage(isAuthenticated ? "此帳號不是管理員，無法刪除影片。" : "請先登入管理員帳號，才能刪除影片。");
       return;
     }
-    const next = customVideos.filter((video) => video.id !== id);
-    setCustomVideos(next);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    if (selectedVideoId === id) setSelectedVideoId(seedVideos[0].id);
-    setFormMessage("已移除自訂影片。預設影片不會被刪除。 ");
+    deleteVideoMutation.mutate({ youtubeId: id });
   }
 
   return (
@@ -400,34 +411,45 @@ export default function Home() {
           </div>
 
           <div className="border-2 border-[#fff7e6] bg-[#f8f0de] p-5 text-[#21392f] shadow-[10px_10px_0_#b7442e] md:p-7">
-            {!isAdminUnlocked ? (
-              <form onSubmit={handleAdminUnlock} className="space-y-5">
+            {!isAuthenticated ? (
+              <div className="space-y-5">
                 <div className="flex items-start gap-4 border border-[#21392f]/20 bg-[#fff8e9] p-5">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center border-2 border-[#21392f] bg-[#21392f] text-[#fff7e6] shadow-[4px_4px_0_#b7442e]">
                     <Lock className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-serif text-2xl font-black">管理員模式已鎖定</h3>
-                    <p className="mt-2 text-sm leading-6 text-[#314a40]">請輸入管理員代碼後再新增或刪除影片。一般訪客不會看到新增影片表單，也不能修改影片庫。</p>
+                    <h3 className="font-serif text-2xl font-black">管理員登入後台</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#314a40]">一般訪客可以瀏覽影片。若要新增或刪除自訂影片，請先登入具有管理員角色的帳號。</p>
                   </div>
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-black uppercase tracking-[0.18em]">管理員代碼</label>
-                  <input type="password" value={adminPasscode} onChange={(event) => setAdminPasscode(event.target.value)} className="w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="請輸入管理員代碼" autoComplete="current-password" />
-                </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <Button type="submit" className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
-                    <KeyRound className="mr-2 h-4 w-4" /> 解鎖管理員模式
+                  <Button type="button" onClick={handleLogin} className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
+                    <Lock className="mr-2 h-4 w-4" /> 登入管理員帳號
                   </Button>
-                  <p className="text-sm font-semibold text-[#314a40]">{adminMessage}</p>
+                  <p className="text-sm font-semibold text-[#314a40]">{authLoading ? "正在確認登入狀態……" : "登入後系統會依帳號角色開放管理功能。"}</p>
                 </div>
-              </form>
+              </div>
+            ) : !isAdmin ? (
+              <div className="space-y-5">
+                <div className="flex items-start gap-4 border border-[#b7442e]/30 bg-[#fff8e9] p-5">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center border-2 border-[#b7442e] bg-[#b7442e] text-[#fff7e6] shadow-[4px_4px_0_#21392f]">
+                    <Lock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-2xl font-black">目前帳號沒有管理員權限</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#314a40]">你已登入為 {user?.name || "一般使用者"}，但此帳號角色為 {user?.role || "user"}。請使用管理員帳號，或在資料庫將此帳號角色調整為 admin。</p>
+                  </div>
+                </div>
+                <Button type="button" onClick={handleLogout} className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#24628f] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
+                  <LogOut className="mr-2 h-4 w-4" /> 登出並切換帳號
+                </Button>
+              </div>
             ) : (
               <>
                 <div className="mb-6 flex flex-col gap-3 border border-[#2f5d46]/30 bg-[#fff8e9] p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm font-black text-[#2f5d46]">管理員模式使用中：可以新增與刪除自訂影片。</p>
-                  <button onClick={handleAdminLogout} className="inline-flex items-center justify-center gap-2 border border-[#21392f]/30 px-3 py-2 text-sm font-black transition hover:bg-[#21392f] hover:text-[#fff7e6]">
-                    <LogOut className="h-4 w-4" /> 離開管理員模式
+                  <p className="text-sm font-black text-[#2f5d46]">管理員模式使用中：{user?.name || "管理員"} 可以新增與刪除資料庫影片。</p>
+                  <button onClick={handleLogout} className="inline-flex items-center justify-center gap-2 border border-[#21392f]/30 px-3 py-2 text-sm font-black transition hover:bg-[#21392f] hover:text-[#fff7e6]">
+                    <LogOut className="h-4 w-4" /> 登出
                   </button>
                 </div>
 
@@ -463,16 +485,20 @@ export default function Home() {
                     <textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} className="min-h-24 w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]" placeholder="例如：適合考前複習，老師講解速度清楚。" />
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <Button type="submit" className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46]">
-                      <Plus className="mr-2 h-4 w-4" /> 新增到影片庫
+                    <Button type="submit" disabled={isMutating} className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46] disabled:cursor-not-allowed disabled:opacity-70">
+                      <Plus className="mr-2 h-4 w-4" /> {addVideoMutation.isPending ? "新增中……" : "新增到資料庫"}
                     </Button>
                     <p className="text-sm font-semibold text-[#314a40]">{formMessage}</p>
                   </div>
                 </form>
 
-                {customVideos.length > 0 && (
-                  <div className="mt-8 border-t border-[#21392f]/20 pt-6">
-                    <h3 className="mb-4 font-serif text-2xl font-black">管理員新增的影片</h3>
+                <div className="mt-8 border-t border-[#21392f]/20 pt-6">
+                  <h3 className="mb-4 font-serif text-2xl font-black">管理員新增的影片</h3>
+                  {videosLoading ? (
+                    <p className="border border-[#21392f]/20 bg-[#fff8e9] p-4 text-sm font-semibold text-[#314a40]">正在載入資料庫影片……</p>
+                  ) : customVideos.length === 0 ? (
+                    <p className="border border-[#21392f]/20 bg-[#fff8e9] p-4 text-sm font-semibold text-[#314a40]">目前尚未新增資料庫影片。</p>
+                  ) : (
                     <div className="space-y-3">
                       {customVideos.map((video) => (
                         <div key={video.id} className="flex items-start justify-between gap-4 border border-[#21392f]/20 bg-[#fff8e9] p-4">
@@ -481,14 +507,14 @@ export default function Home() {
                             <p className="mt-1 font-bold">{video.title}</p>
                             <p className="mt-1 text-sm text-[#314a40]">{video.channel}</p>
                           </div>
-                          <button onClick={() => removeCustomVideo(video.id)} className="border border-[#21392f]/30 p-2 text-[#b7442e] transition hover:bg-[#b7442e] hover:text-[#fff7e6]" aria-label="移除自訂影片">
+                          <button disabled={isMutating} onClick={() => removeCustomVideo(video.id)} className="border border-[#21392f]/30 p-2 text-[#b7442e] transition hover:bg-[#b7442e] hover:text-[#fff7e6] disabled:cursor-not-allowed disabled:opacity-50" aria-label="移除自訂影片">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </>
             )}
           </div>
