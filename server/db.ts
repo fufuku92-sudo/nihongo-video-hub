@@ -134,6 +134,27 @@ export async function upsertVideo(video: InsertVideo) {
   return getVideoByYoutubeId(video.youtubeId);
 }
 
+export async function updateVideoByYoutubeId(
+  youtubeId: string,
+  updates: Pick<InsertVideo, "title" | "level" | "reason">,
+) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database is not available");
+  }
+
+  await db
+    .update(videos)
+    .set({
+      title: updates.title,
+      level: updates.level,
+      reason: updates.reason ?? null,
+    })
+    .where(eq(videos.youtubeId, youtubeId));
+
+  return getVideoByYoutubeId(youtubeId);
+}
+
 export async function deleteVideoByYoutubeId(youtubeId: string) {
   const db = await getDb();
   if (!db) {

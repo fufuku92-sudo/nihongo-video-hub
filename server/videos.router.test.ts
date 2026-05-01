@@ -5,6 +5,7 @@ const dbMocks = vi.hoisted(() => ({
   listVideos: vi.fn(),
   upsertVideo: vi.fn(),
   deleteVideoByYoutubeId: vi.fn(),
+  updateVideoByYoutubeId: vi.fn(),
 }));
 
 vi.mock("./db", () => dbMocks);
@@ -108,5 +109,54 @@ describe("videos router", () => {
       }),
     ).rejects.toThrow("You do not have required permission");
     expect(dbMocks.upsertVideo).not.toHaveBeenCalled();
+  });
+
+  it("allows admins to update persisted video title, level and reason", async () => {
+    dbMocks.updateVideoByYoutubeId.mockImplementation(async (youtubeId, input) => ({
+      id: 3,
+      youtubeId,
+      title: input.title,
+      channel: "Existing Channel",
+      level: input.level,
+      topic: "文法",
+      reason: input.reason,
+      createdByUserId: 7,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+    }));
+
+    const caller = appRouter.createCaller(createContext("admin"));
+    const result = await caller.videos.update({
+      youtubeId: "n4Grammar01",
+      title: "N4 文法整理更新版",
+      level: "N4",
+      reason: "更新後的備註資訊。",
+    });
+
+    expect(result?.title).toBe("N4 文法整理更新版");
+    expect(result?.level).toBe("N4");
+    expect(result?.reason).toBe("更新後的備註資訊。");
+    expect(dbMocks.updateVideoByYoutubeId).toHaveBeenCalledWith(
+      "n4Grammar01",
+      expect.objectContaining({
+        title: "N4 文法整理更新版",
+        level: "N4",
+        reason: "更新後的備註資訊。",
+      }),
+    );
+  });
+
+  it("rejects non-admin users from updating videos", async () => {
+    const caller = appRouter.createCaller(createContext("user"));
+
+    await expect(
+      caller.videos.update({
+        youtubeId: "n4Grammar01",
+        title: "未授權更新",
+        level: "N4",
+        reason: "不應寫入。",
+      }),
+    ).rejects.toThrow("You do not have required permission");
+    expect(dbMocks.updateVideoByYoutubeId).not.toHaveBeenCalled();
   });
 });
