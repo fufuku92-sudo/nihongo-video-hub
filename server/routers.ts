@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { adminProcedure, publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 
 const levelSchema = z.enum(["N5", "N4", "N3", "N2", "N1"]);
@@ -84,7 +84,7 @@ export const appRouter = router({
   }),
   videos: router({
     list: publicProcedure.query(() => db.listVideos()),
-    add: adminProcedure.input(videoInputSchema).mutation(({ ctx, input }) =>
+    add: publicProcedure.input(videoInputSchema).mutation(({ ctx, input }) =>
       db.upsertVideo({
         youtubeId: input.youtubeId,
         title: input.title,
@@ -93,10 +93,10 @@ export const appRouter = router({
         level: input.level,
         topic: input.topic,
         reason: input.reason || null,
-        createdByUserId: ctx.user.id,
+        createdByUserId: ctx.user?.id || 0,
       }),
     ),
-    update: adminProcedure.input(videoUpdateSchema).mutation(({ input }) =>
+    update: publicProcedure.input(videoUpdateSchema).mutation(({ input }) =>
       db.updateVideoByYoutubeId(input.youtubeId, {
         title: input.title,
         channel: input.channel,
@@ -105,7 +105,7 @@ export const appRouter = router({
         reason: input.reason || null,
       }),
     ),
-    delete: adminProcedure
+    delete: publicProcedure
       .input(
         z.object({
           youtubeId: youtubeIdSchema,
@@ -124,7 +124,7 @@ export const appRouter = router({
   }),
   songs: router({
     list: publicProcedure.query(() => db.listSongs()),
-    add: adminProcedure.input(songInputSchema).mutation(({ ctx, input }) =>
+    add: publicProcedure.input(songInputSchema).mutation(({ ctx, input }) =>
       db.upsertSong({
         youtubeId: input.youtubeId,
         title: input.title,
@@ -139,10 +139,10 @@ export const appRouter = router({
         vocabularyNotes: input.vocabularyNotes || null,
         grammarNotes: input.grammarNotes || null,
         listeningPrompt: input.listeningPrompt || null,
-        createdByUserId: ctx.user.id,
+        createdByUserId: ctx.user?.id || 0,
       }),
     ),
-    update: adminProcedure.input(songUpdateSchema).mutation(({ input }) =>
+    update: publicProcedure.input(songUpdateSchema).mutation(({ input }) =>
       db.updateSongByYoutubeId(input.youtubeId, {
         title: input.title,
         artist: input.artist,
@@ -158,7 +158,7 @@ export const appRouter = router({
         listeningPrompt: input.listeningPrompt || null,
       }),
     ),
-    delete: adminProcedure
+    delete: publicProcedure
       .input(
         z.object({
           youtubeId: youtubeIdSchema,
