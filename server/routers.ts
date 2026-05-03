@@ -3,7 +3,6 @@ import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import * as db from "./db";
 
 const levelSchema = z.enum(["N5", "N4", "N3", "N2", "N1"]);
 const topicSchema = z.enum(["文法", "單字", "聽解", "讀解", "綜合"]);
@@ -69,8 +68,46 @@ const pageViewInputSchema = z.object({
   path: z.string().trim().min(1).max(255).default("/"),
 });
 
+// 假數據存儲（只在內存中，重啟後會消失）
+let mockVideos = [
+  {
+    id: 1,
+    youtubeId: "abc123XYZ",
+    title: "N5 文法練習",
+    channel: "Nihongo Channel",
+    channelUrl: "https://www.youtube.com/@nihongo",
+    level: "N5" as const,
+    topic: "文法" as const,
+    reason: "適合入門複習。",
+    createdByUserId: 1,
+    createdAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-01-01"),
+  },
+];
+
+let mockSongs = [
+  {
+    id: 1,
+    youtubeId: "song123ABC",
+    title: "やさしい日本語の歌",
+    artist: "Sample Artist",
+    channel: "Sample Music Channel",
+    channelUrl: "https://www.youtube.com/@samplemusic",
+    level: "N4" as const,
+    mood: "抒情",
+    reason: "語速清楚，適合聽力練習。",
+    lyricsUrl: "https://example.com/lyrics",
+    lyricsNote: "請使用官方授權歌詞來源搭配學習。",
+    vocabularyNotes: "常見生活動詞與形容詞。",
+    grammarNotes: "て形與普通形表現。",
+    listeningPrompt: "先聽副歌，再練習跟唱。",
+    createdByUserId: 1,
+    createdAt: new Date("2026-02-01"),
+    updatedAt: new Date("2026-02-01"),
+  },
+];
+
 export const appRouter = router({
-  // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -83,9 +120,12 @@ export const appRouter = router({
     }),
   }),
   videos: router({
-    list: publicProcedure.query(() => db.listVideos()),
-    add: publicProcedure.input(videoInputSchema).mutation(({ ctx, input }) =>
-      db.upsertVideo({
+    list: publicProcedure.query(() => {
+      return mockVideos;
+    }),
+    add: publicProcedure.input(videoInputSchema).mutation(({ input }) => {
+      const newVideo = {
+        id: mockVideos.length + 1,
         youtubeId: input.youtubeId,
         title: input.title,
         channel: input.channel,
@@ -93,39 +133,56 @@ export const appRouter = router({
         level: input.level,
         topic: input.topic,
         reason: input.reason || null,
-        createdByUserId: ctx.user?.id || 0,
-      }),
-    ),
-    update: publicProcedure.input(videoUpdateSchema).mutation(({ input }) =>
-      db.updateVideoByYoutubeId(input.youtubeId, {
-        title: input.title,
-        channel: input.channel,
-        channelUrl: input.channelUrl || null,
-        level: input.level,
-        reason: input.reason || null,
-      }),
-    ),
+        createdByUserId: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockVideos.push(newVideo);
+      return newVideo;
+    }),
+    update: publicProcedure.input(videoUpdateSchema).mutation(({ input }) => {
+      const index = mockVideos.findIndex(v => v.youtubeId === input.youtubeId);
+      if (index !== -1) {
+        mockVideos[index] = {
+          ...mockVideos[index],
+          title: input.title,
+          channel: input.channel,
+          channelUrl: input.channelUrl || null,
+          level: input.level,
+          reason: input.reason || null,
+          updatedAt: new Date(),
+        };
+        return mockVideos[index];
+      }
+      throw new Error("影片未找到");
+    }),
     delete: publicProcedure
       .input(
         z.object({
           youtubeId: youtubeIdSchema,
         }),
       )
-      .mutation(({ input }) => db.deleteVideoByYoutubeId(input.youtubeId)),
+      .mutation(({ input }) => {
+        mockVideos = mockVideos.filter(v => v.youtubeId !== input.youtubeId);
+        return { success: true } as const;
+      }),
   }),
   analytics: router({
-    stats: publicProcedure.query(() => db.getPageViewStats()),
-    recordPageView: publicProcedure.input(pageViewInputSchema).mutation(({ ctx, input }) =>
-      db.recordPageView({
-        path: input.path,
-        userAgent: ctx.req.get("user-agent") || null,
-      }),
-    ),
+    stats: publicProcedure.query(() => ({
+      totalViews: 0,
+    })),
+    recordPageView: publicProcedure.input(pageViewInputSchema).mutation(({ ctx, input }) => ({
+      success: true,
+      totalViews: 0,
+    })),
   }),
   songs: router({
-    list: publicProcedure.query(() => db.listSongs()),
-    add: publicProcedure.input(songInputSchema).mutation(({ ctx, input }) =>
-      db.upsertSong({
+    list: publicProcedure.query(() => {
+      return mockSongs;
+    }),
+    add: publicProcedure.input(songInputSchema).mutation(({ input }) => {
+      const newSong = {
+        id: mockSongs.length + 1,
         youtubeId: input.youtubeId,
         title: input.title,
         artist: input.artist,
@@ -139,32 +196,46 @@ export const appRouter = router({
         vocabularyNotes: input.vocabularyNotes || null,
         grammarNotes: input.grammarNotes || null,
         listeningPrompt: input.listeningPrompt || null,
-        createdByUserId: ctx.user?.id || 0,
-      }),
-    ),
-    update: publicProcedure.input(songUpdateSchema).mutation(({ input }) =>
-      db.updateSongByYoutubeId(input.youtubeId, {
-        title: input.title,
-        artist: input.artist,
-        channel: input.channel,
-        channelUrl: input.channelUrl || null,
-        level: input.level,
-        mood: input.mood,
-        reason: input.reason || null,
-        lyricsUrl: input.lyricsUrl || null,
-        lyricsNote: input.lyricsNote || null,
-        vocabularyNotes: input.vocabularyNotes || null,
-        grammarNotes: input.grammarNotes || null,
-        listeningPrompt: input.listeningPrompt || null,
-      }),
-    ),
+        createdByUserId: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockSongs.push(newSong);
+      return newSong;
+    }),
+    update: publicProcedure.input(songUpdateSchema).mutation(({ input }) => {
+      const index = mockSongs.findIndex(s => s.youtubeId === input.youtubeId);
+      if (index !== -1) {
+        mockSongs[index] = {
+          ...mockSongs[index],
+          title: input.title,
+          artist: input.artist,
+          channel: input.channel,
+          channelUrl: input.channelUrl || null,
+          level: input.level,
+          mood: input.mood,
+          reason: input.reason || null,
+          lyricsUrl: input.lyricsUrl || null,
+          lyricsNote: input.lyricsNote || null,
+          vocabularyNotes: input.vocabularyNotes || null,
+          grammarNotes: input.grammarNotes || null,
+          listeningPrompt: input.listeningPrompt || null,
+          updatedAt: new Date(),
+        };
+        return mockSongs[index];
+      }
+      throw new Error("歌曲未找到");
+    }),
     delete: publicProcedure
       .input(
         z.object({
           youtubeId: youtubeIdSchema,
         }),
       )
-      .mutation(({ input }) => db.deleteSongByYoutubeId(input.youtubeId)),
+      .mutation(({ input }) => {
+        mockSongs = mockSongs.filter(s => s.youtubeId !== input.youtubeId);
+        return { success: true } as const;
+      }),
   }),
 });
 
