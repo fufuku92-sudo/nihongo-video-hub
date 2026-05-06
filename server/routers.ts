@@ -24,6 +24,11 @@ const optionalLyricsUrlSchema = z.preprocess(
   z.string().trim().url("請填寫有效的歌詞或官方資訊網址").max(500, "歌詞來源網址過長").optional(),
 );
 
+const optionalImageUrlSchema = z.preprocess(
+  value => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().url("請填寫有效的圖片網址").max(500, "圖片網址過長").optional(),
+);
+
 const editableVideoFieldsSchema = z.object({
   title: z.string().trim().min(1, "請填寫影片標題").max(300, "影片標題過長"),
   channel: z.string().trim().min(1, "請填寫頻道名稱").max(200, "頻道名稱過長"),
@@ -64,11 +69,29 @@ const songUpdateSchema = editableSongFieldsSchema.extend({
   youtubeId: youtubeIdSchema,
 });
 
+const editablePodcastFieldsSchema = z.object({
+  name: z.string().trim().min(1, "請填寫 Podcast 名稱").max(300, "名稱過長"),
+  host: z.string().trim().min(1, "請填寫主持人或頻道名稱").max(200, "主持人名稱過長"),
+  level: levelSchema,
+  platform: z.string().trim().min(1, "請填寫平台名稱").max(100, "平台名稱過長"),
+  platformUrl: z.string().trim().url("請填寫有效的平台連結").max(500, "連結過長"),
+  description: z.string().trim().max(800, "描述過長").optional(),
+  coverImageUrl: optionalImageUrlSchema,
+});
+
+const podcastInputSchema = editablePodcastFieldsSchema.extend({
+  podcastId: z.string().trim().min(1, "請填寫 Podcast ID").max(100, "ID 過長"),
+});
+
+const podcastUpdateSchema = editablePodcastFieldsSchema.extend({
+  podcastId: z.string().trim().min(1, "請填寫 Podcast ID").max(100, "ID 過長"),
+});
+
 const pageViewInputSchema = z.object({
   path: z.string().trim().min(1).max(255).default("/"),
 });
 
-// 假數據存儲（只在內存中，重啟後會消失）
+// 假數據存儲
 let mockVideos = [
   {
     id: 1,
@@ -106,6 +129,48 @@ let mockSongs = [
     updatedAt: new Date("2026-02-01"),
   },
 ];
+
+let mockPodcasts = [
+  {
+    id: 1,
+    podcastId: "nhk-easy-japanese",
+    name: "NHK Easy Japanese",
+    host: "NHK WORLD",
+    level: "N5" as const,
+    platform: "Spotify",
+    platformUrl: "https://open.spotify.com/show/",
+    description: "NHK 官方推出的初級日文學習 Podcast，每集介紹日常用語與基礎文法。",
+    coverImageUrl: "https://example.com/nhk-easy.jpg",
+    createdByUserId: 1,
+    createdAt: new Date("2026-01-15"),
+    updatedAt: new Date("2026-01-15"),
+  },
+];
+
+let pageViews = 12456;
+
+// CSV 解析函數
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === "," && !insideQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current.trim());
+  return result;
+}
 
 export const appRouter = router({
   system: systemRouter,
@@ -169,12 +234,15 @@ export const appRouter = router({
   }),
   analytics: router({
     stats: publicProcedure.query(() => ({
-      totalViews: 0,
+      totalViews: pageViews,
     })),
-    recordPageView: publicProcedure.input(pageViewInputSchema).mutation(({ ctx, input }) => ({
-      success: true,
-      totalViews: 0,
-    })),
+    recordPageView: publicProcedure.input(pageViewInputSchema).mutation(({ ctx, input }) => {
+      pageViews++;
+      return {
+        success: true,
+        totalViews: pageViews,
+      };
+    }),
   }),
   songs: router({
     list: publicProcedure.query(() => {
@@ -235,6 +303,194 @@ export const appRouter = router({
       .mutation(({ input }) => {
         mockSongs = mockSongs.filter(s => s.youtubeId !== input.youtubeId);
         return { success: true } as const;
+      }),
+    importFromCSV: publicProcedure
+      .input(z.object({
+        csvContent: z.string(),
+      }))
+      .mutation(({ input }) => {
+        const lines = input.csvContent.split("\n").filter(line => line.trim());
+        const headers = parseCSVLine(lines[0]);
+        const results = {
+          success: 0,
+          failed: 0,
+          errors: [] as string[],
+        };
+
+        for (let i = 1; i < lines.length; i++) {
+          try {
+            const values = parseCSVLine(lines[i]);
+            const row: Record<string, string> = {};
+
+            headers.forEach((header, index) => {
+              row[header] = values[index] || "";
+            });
+
+            if (!row.youtubeId || !row.title || !row.artist || !row.channel) {
+              results.failed++;
+              results.errors.push(`第 ${i + 1} 行：缺少必要欄位`);
+              continue;
+            }
+
+            if (!["N5", "N4", "N3", "N2", "N1"].includes(row.level)) {
+              results.failed++;
+              results.errors.push(`第 ${i + 1} 行：級別不正確`);
+              continue;
+            }
+
+            const exists = mockSongs.some(s => s.youtubeId === row.youtubeId);
+            if (exists) {
+              results.failed++;
+              results.errors.push(`第 ${i + 1} 行：歌曲已存在`);
+              continue;
+            }
+
+            const newSong = {
+              id: mockSongs.length + 1,
+              youtubeId: row.youtubeId,
+              title: row.title,
+              artist: row.artist,
+              channel: row.channel,
+              channelUrl: row.channelUrl || null,
+              level: row.level as "N5" | "N4" | "N3" | "N2" | "N1",
+              mood: row.mood || "日文歌",
+              reason: row.reason || null,
+              lyricsUrl: row.lyricsUrl || null,
+              lyricsNote: row.lyricsNote || null,
+              vocabularyNotes: row.vocabularyNotes || null,
+              grammarNotes: row.grammarNotes || null,
+              listeningPrompt: row.listeningPrompt || null,
+              createdByUserId: 1,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+
+            mockSongs.push(newSong);
+            results.success++;
+          } catch (error) {
+            results.failed++;
+            results.errors.push(`第 ${i + 1} 行：解析錯誤`);
+          }
+        }
+
+        return results;
+      }),
+  }),
+  podcasts: router({
+    list: publicProcedure.query(() => {
+      return mockPodcasts;
+    }),
+    add: publicProcedure.input(podcastInputSchema).mutation(({ input }) => {
+      const newPodcast = {
+        id: mockPodcasts.length + 1,
+        podcastId: input.podcastId,
+        name: input.name,
+        host: input.host,
+        level: input.level,
+        platform: input.platform,
+        platformUrl: input.platformUrl,
+        description: input.description || null,
+        coverImageUrl: input.coverImageUrl || null,
+        createdByUserId: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockPodcasts.push(newPodcast);
+      return newPodcast;
+    }),
+    update: publicProcedure.input(podcastUpdateSchema).mutation(({ input }) => {
+      const index = mockPodcasts.findIndex(p => p.podcastId === input.podcastId);
+      if (index !== -1) {
+        mockPodcasts[index] = {
+          ...mockPodcasts[index],
+          name: input.name,
+          host: input.host,
+          level: input.level,
+          platform: input.platform,
+          platformUrl: input.platformUrl,
+          description: input.description || null,
+          coverImageUrl: input.coverImageUrl || null,
+          updatedAt: new Date(),
+        };
+        return mockPodcasts[index];
+      }
+      throw new Error("Podcast 未找到");
+    }),
+    delete: publicProcedure
+      .input(
+        z.object({
+          podcastId: z.string().trim().min(1, "請填寫 Podcast ID"),
+        }),
+      )
+      .mutation(({ input }) => {
+        mockPodcasts = mockPodcasts.filter(p => p.podcastId !== input.podcastId);
+        return { success: true } as const;
+      }),
+    importFromCSV: publicProcedure
+      .input(z.object({
+        csvContent: z.string(),
+      }))
+      .mutation(({ input }) => {
+        const lines = input.csvContent.split("\n").filter(line => line.trim());
+        const headers = parseCSVLine(lines[0]);
+        const results = {
+          success: 0,
+          failed: 0,
+          errors: [] as string[],
+        };
+
+        for (let i = 1; i < lines.length; i++) {
+          try {
+            const values = parseCSVLine(lines[i]);
+            const row: Record<string, string> = {};
+
+            headers.forEach((header, index) => {
+              row[header] = values[index] || "";
+            });
+
+            if (!row.name || !row.host || !row.platform || !row.platformUrl) {
+              results.failed++;
+              results.errors.push(`第 ${i + 1} 行：缺少必要欄位`);
+              continue;
+            }
+
+            if (!["N5", "N4", "N3", "N2", "N1"].includes(row.level)) {
+              results.failed++;
+              results.errors.push(`第 ${i + 1} 行：級別不正確`);
+              continue;
+            }
+
+            const exists = mockPodcasts.some(p => p.podcastId === row.podcastId);
+            if (exists) {
+              results.failed++;
+              results.errors.push(`第 ${i + 1} 行：Podcast 已存在`);
+              continue;
+            }
+
+            const newPodcast = {
+              id: mockPodcasts.length + 1,
+              podcastId: row.podcastId,
+              name: row.name,
+              host: row.host,
+              level: row.level as "N5" | "N4" | "N3" | "N2" | "N1",
+              platform: row.platform,
+              platformUrl: row.platformUrl,
+              description: row.description || null,
+              coverImageUrl: row.coverImageUrl || null,
+              createdByUserId: 1,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+
+            mockPodcasts.push(newPodcast);
+            results.success++;
+          } catch (error) {
+            results.failed++;
+            results.errors.push(`第 ${i + 1} 行：解析錯誤`);
+          }
+        }
+
+        return results;
       }),
   }),
 });
