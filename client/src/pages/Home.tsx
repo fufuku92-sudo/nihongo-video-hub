@@ -66,13 +66,7 @@ const levels: Array<{ level: Level; label: string; description: string; color: s
 
 const topics: Array<"全部" | Topic> = ["全部", "文法", "單字", "聽解", "讀解", "綜合"];
 
-const seedVideos: VideoItem[] = [
-  { id: "3MPbTCqIkuM", channelUrl: "https://www.youtube.com/@journeytojapan_sakina", level: "N5", topic: "文法", title: "JLPT N5 Grammar Practice｜N5 文法過去問解説", channel: "SAKINA | JOURNEY TO JAPAN", reason: "適合作為 N5 文法練習入口，標題與級別明確。", confidence: "高" },
-  { id: "0V2Y8AIUugI", channelUrl: "https://www.youtube.com/@nihongo-note", level: "N5", topic: "單字", title: "一次學完所有的 N5 動詞（全126個單字）", channel: "日文筆記本", reason: "以圖文例句整理 N5 動詞，適合初學者建立語彙基礎。", confidence: "高" },
-  { id: "x6ICllwCMxE", channelUrl: "https://www.youtube.com/@ListeningJapanese-zhTW", level: "N5", topic: "單字", title: "日檢 N5 必考單字｜名詞篇單字＋例句", channel: "YouTube 日文學習頻道", reason: "以 N5 必考名詞與例句作為語彙補充，適合初學者反覆練習。", confidence: "中" },
-  { id: "qRACZeHacpA", channelUrl: "https://www.youtube.com/@ListeningJapanese-zhTW", level: "N5", topic: "單字", title: "日檢 N5 必考單字｜副詞・連體詞・接續詞篇", channel: "YouTube 日文學習頻道", reason: "補充常見副詞與連接語，適合搭配基礎文法學習。", confidence: "中" },
-  { id: "6nByRvRMuaY", channelUrl: "https://www.youtube.com/@mochirealjapanese3430", level: "N5", topic: "聽解", title: "JLPT N5 Listening Practice with Mochi Sensei", channel: "Mochi real Japanese", reason: "針對 N5 聽力練習，適合建立初級聽懂速度。", confidence: "高" },
-];
+const seedVideos: VideoItem[] = [];
 
 function topicIcon(topic: Topic) {
   if (topic === "聽解") return <Headphones className="h-4 w-4" />;
