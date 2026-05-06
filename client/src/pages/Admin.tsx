@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 
 import { trpc } from "@/lib/trpc";
-import { ExternalLink, Music2, Pencil, Plus, ShieldCheck, Train, Trash2, X } from "lucide-react";
+import { ExternalLink, Music2, Pencil, Plus, ShieldCheck, Train, Trash2, X, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Level = "N5" | "N4" | "N3" | "N2" | "N1";
@@ -33,6 +33,17 @@ type SongItem = {
   listeningPrompt: string;
 };
 
+type PodcastItem = {
+  id: string;
+  name: string;
+  host: string;
+  level: Level;
+  platform: string;
+  platformUrl: string;
+  description?: string | null;
+  coverImageUrl?: string | null;
+};
+
 type VideoFormState = {
   url: string;
   title: string;
@@ -57,6 +68,17 @@ type SongFormState = {
   vocabularyNotes: string;
   grammarNotes: string;
   listeningPrompt: string;
+};
+
+type PodcastFormState = {
+  podcastId: string;
+  name: string;
+  host: string;
+  platform: string;
+  platformUrl: string;
+  level: Level;
+  description: string;
+  coverImageUrl: string;
 };
 
 const levels: Array<{ level: Level; label: string }> = [
@@ -95,6 +117,17 @@ const emptySongForm: SongFormState = {
   listeningPrompt: "",
 };
 
+const emptyPodcastForm: PodcastFormState = {
+  podcastId: "",
+  name: "",
+  host: "",
+  platform: "Spotify",
+  platformUrl: "",
+  level: "N5",
+  description: "",
+  coverImageUrl: "",
+};
+
 const ticketImage = "https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_ticket_cards-9MdMarHp8aRGqMYTv5me3J.webp";
 
 function extractYouTubeId(input: string) {
@@ -119,6 +152,7 @@ export default function Admin() {
   const utils = trpc.useUtils();
   const { data: databaseVideos = [], isLoading: videosLoading } = trpc.videos.list.useQuery();
   const { data: databaseSongs = [], isLoading: songsLoading } = trpc.songs.list.useQuery();
+  const { data: databasePodcasts = [], isLoading: podcastsLoading } = trpc.podcasts.list.useQuery();
 
   const [videoForm, setVideoForm] = useState<VideoFormState>(emptyVideoForm);
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
@@ -129,6 +163,15 @@ export default function Admin() {
   const [editingSongId, setEditingSongId] = useState<string | null>(null);
   const [editSongForm, setEditSongForm] = useState<SongFormState>(emptySongForm);
   const [songMessage, setSongMessage] = useState("可新增日文歌 YouTube 連結、官方歌詞來源與學習重點；不建議貼上未授權完整歌詞。");
+
+  const [podcastForm, setPodcastForm] = useState<PodcastFormState>(emptyPodcastForm);
+  const [editingPodcastId, setEditingPodcastId] = useState<string | null>(null);
+  const [editPodcastForm, setEditPodcastForm] = useState<PodcastFormState>(emptyPodcastForm);
+  const [podcastMessage, setPodcastMessage] = useState("可新增 Podcast 資訊與平台連結。");
+
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [csvMessage, setCsvMessage] = useState("選擇 CSV 檔案上傳");
+  const [csvType, setCsvType] = useState<"songs" | "podcasts">("songs");
 
   const customVideos = useMemo<VideoItem[]>(() => {
     return databaseVideos.map((video) => ({
@@ -159,6 +202,19 @@ export default function Admin() {
       listeningPrompt: song.listeningPrompt || "先聽副歌，再回到整首歌練習辨音與跟唱。",
     }));
   }, [databaseSongs]);
+
+  const podcasts = useMemo<PodcastItem[]>(() => {
+    return databasePodcasts.map((podcast) => ({
+      id: podcast.podcastId,
+      name: podcast.name,
+      host: podcast.host,
+      level: podcast.level as Level,
+      platform: podcast.platform,
+      platformUrl: podcast.platformUrl,
+      description: podcast.description ?? null,
+      coverImageUrl: podcast.coverImageUrl ?? null,
+    }));
+  }, [databasePodcasts]);
 
   const addVideoMutation = trpc.videos.add.useMutation({
     onSuccess: async () => {
@@ -216,7 +272,35 @@ export default function Admin() {
     onError: (mutationError) => setSongMessage(mutationError.message || "刪除歌曲失敗。"),
   });
 
-  const isMutating = addVideoMutation.isPending || updateVideoMutation.isPending || deleteVideoMutation.isPending || addSongMutation.isPending || updateSongMutation.isPending || deleteSongMutation.isPending;
+  const addPodcastMutation = trpc.podcasts.add.useMutation({
+    onSuccess: async () => {
+      await utils.podcasts.list.invalidate();
+      setPodcastForm(emptyPodcastForm);
+      setPodcastMessage("已新增 Podcast 到資料庫。公開頁面會顯示這個 Podcast。");
+    },
+    onError: (mutationError) => setPodcastMessage(mutationError.message || "新增 Podcast 失敗。"),
+  });
+
+  const updatePodcastMutation = trpc.podcasts.update.useMutation({
+    onSuccess: async () => {
+      await utils.podcasts.list.invalidate();
+      setEditingPodcastId(null);
+      setEditPodcastForm(emptyPodcastForm);
+      setPodcastMessage("已更新 Podcast 資訊。");
+    },
+    onError: (mutationError) => setPodcastMessage(mutationError.message || "更新 Podcast 失敗。"),
+  });
+
+  const deletePodcastMutation = trpc.podcasts.delete.useMutation({
+    onSuccess: async (_result, variables) => {
+      await utils.podcasts.list.invalidate();
+      if (editingPodcastId === variables.podcastId) setEditingPodcastId(null);
+      setPodcastMessage("已從資料庫移除這個 Podcast。");
+    },
+    onError: (mutationError) => setPodcastMessage(mutationError.message || "刪除 Podcast 失敗。"),
+  });
+
+  const isMutating = addVideoMutation.isPending || updateVideoMutation.isPending || deleteVideoMutation.isPending || addSongMutation.isPending || updateSongMutation.isPending || deleteSongMutation.isPending || addPodcastMutation.isPending || updatePodcastMutation.isPending || deletePodcastMutation.isPending;
 
   function handleAddVideo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -333,6 +417,110 @@ export default function Admin() {
     });
   }
 
+  function handleAddPodcast(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!podcastForm.podcastId.trim() || !podcastForm.name.trim() || !podcastForm.host.trim() || !podcastForm.platformUrl.trim()) {
+      setPodcastMessage("請填寫 Podcast ID、名稱、主持人和平台連結。");
+      return;
+    }
+    addPodcastMutation.mutate({
+      podcastId: podcastForm.podcastId.trim(),
+      name: podcastForm.name.trim(),
+      host: podcastForm.host.trim(),
+      platform: podcastForm.platform.trim() || "Spotify",
+      platformUrl: podcastForm.platformUrl.trim(),
+      level: podcastForm.level,
+      description: podcastForm.description.trim() || undefined,
+      coverImageUrl: podcastForm.coverImageUrl.trim() || undefined,
+    });
+  }
+
+  function startEditPodcast(podcast: PodcastItem) {
+    setEditingPodcastId(podcast.id);
+    setEditPodcastForm({
+      podcastId: podcast.id,
+      name: podcast.name,
+      host: podcast.host,
+      platform: podcast.platform,
+      platformUrl: podcast.platformUrl,
+      level: podcast.level,
+      description: podcast.description ?? "",
+      coverImageUrl: podcast.coverImageUrl ?? "",
+    });
+    setPodcastMessage("正在編輯 Podcast 資訊。");
+  }
+
+  function handleUpdatePodcast(event: FormEvent<HTMLFormElement>, id: string) {
+    event.preventDefault();
+    if (!editPodcastForm.name.trim() || !editPodcastForm.host.trim() || !editPodcastForm.platformUrl.trim()) {
+      setPodcastMessage("請填寫名稱、主持人和平台連結。");
+      return;
+    }
+    updatePodcastMutation.mutate({
+      podcastId: id,
+      name: editPodcastForm.name.trim(),
+      host: editPodcastForm.host.trim(),
+      platform: editPodcastForm.platform.trim() || "Spotify",
+      platformUrl: editPodcastForm.platformUrl.trim(),
+      level: editPodcastForm.level,
+      description: editPodcastForm.description.trim() || undefined,
+      coverImageUrl: editPodcastForm.coverImageUrl.trim() || undefined,
+    });
+  }
+
+  const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setCsvLoading(true);
+    setCsvMessage("正在上傳...");
+
+    try {
+      const csvContent = await file.text();
+      
+      const endpoint = csvType === "songs" ? "songs.importFromCSV" : "podcasts.importFromCSV";
+      
+      const response = await fetch(`/api/trpc/${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: endpoint,
+          params: {
+            input: { csvContent },
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.result?.data) {
+        const data = result.result.data;
+        if (csvType === "songs") {
+          await utils.songs.list.invalidate();
+        } else {
+          await utils.podcasts.list.invalidate();
+        }
+        
+        if (data.success > 0) {
+          setCsvMessage(`✅ 成功匯入 ${data.success} 項${csvType === "songs" ? "歌曲" : "Podcast"}${data.failed > 0 ? `，失敗 ${data.failed} 項` : ""}`);
+        } else {
+          setCsvMessage(`❌ 匯入失敗：${data.errors?.[0] || "未知錯誤"}`);
+        }
+      } else if (result.error) {
+        setCsvMessage(`❌ 錯誤：${result.error.message}`);
+      }
+    } catch (error) {
+      setCsvMessage(`❌ 上傳錯誤：${error instanceof Error ? error.message : "未知錯誤"}`);
+    } finally {
+      setCsvLoading(false);
+      event.target.value = "";
+    }
+  };
+
   const fieldClass = "w-full border-2 border-[#21392f]/40 bg-[#fff8e9] px-4 py-3 text-base outline-none focus:border-[#b7442e]";
   const labelClass = "mb-2 block text-sm font-black uppercase tracking-[0.18em]";
 
@@ -357,13 +545,14 @@ export default function Admin() {
           <div>
             <p className="mb-3 text-sm font-black uppercase tracking-[0.32em] text-[#b7442e]">Admin Route</p>
             <h1 className="font-serif text-4xl font-black tracking-[-0.03em] md:text-6xl">站務資料維護。</h1>
-            <p className="mt-5 max-w-xl text-base leading-8 text-[#314a40]">此頁面可以新增、編輯和刪除資料庫中的影片與歌曲。請確保所有資訊正確無誤再提交。</p>
-            <div className="mt-8 inline-flex items-center gap-2 border border-[#21392f]/25 bg-[#f8f0de]/90 px-3 py-2 text-sm font-semibold shadow-[3px_3px_0_#24628f]"><ShieldCheck className="h-4 w-4 text-[#2f5d46]" />可以新增、編輯、刪除資料庫影片與歌曲</div>
+            <p className="mt-5 max-w-xl text-base leading-8 text-[#314a40]">此頁面可以新增、編輯和刪除資料庫中的影片、歌曲和 Podcast。請確保所有資訊正確無誤再提交。</p>
+            <div className="mt-8 inline-flex items-center gap-2 border border-[#21392f]/25 bg-[#f8f0de]/90 px-3 py-2 text-sm font-semibold shadow-[3px_3px_0_#24628f]"><ShieldCheck className="h-4 w-4 text-[#2f5d46]" />可以新增、編輯、刪除資料庫影片、歌曲和 Podcast</div>
             <img src={ticketImage} alt="JLPT 分級票券插畫" className="mt-8 hidden w-full border border-[#21392f]/20 shadow-[12px_12px_0_#b7442e] lg:block" />
           </div>
 
           <div className="border-2 border-[#21392f] bg-[#f8f0de] p-5 text-[#21392f] shadow-[10px_10px_0_#24628f] md:p-7">
             <div className="space-y-10">
+              {/* 影片管理區塊 */}
               <section className="space-y-6">
                 <div><p className="text-sm font-black uppercase tracking-[0.28em] text-[#b7442e]">Video Catalog</p><h2 className="mt-2 font-serif text-3xl font-black">影片管理</h2></div>
                 <form onSubmit={handleAddVideo} className="space-y-5">
@@ -391,8 +580,50 @@ export default function Admin() {
                 </div>
               </section>
 
+              {/* 歌曲管理區塊 */}
               <section className="space-y-6 border-t-2 border-[#21392f] pt-10">
                 <div><p className="text-sm font-black uppercase tracking-[0.28em] text-[#b7442e]">Song Study</p><h2 className="mt-2 flex items-center gap-2 font-serif text-3xl font-black"><Music2 className="h-7 w-7" /> 日文歌曲管理</h2><p className="mt-3 text-sm leading-6 text-[#314a40]">可以放日文歌 YouTube 連結、官方歌詞頁與學習重點。完整商業歌詞請使用官方或授權來源連結；本站只整理學習提示，不自動生成或重製完整歌詞。</p></div>
+                
+                {/* CSV 上傳區塊 */}
+                <div className="border border-[#21392f]/20 bg-[#fff8e9] p-4">
+                  <h3 className="mb-3 font-serif text-lg font-black">📊 批次匯入（CSV）</h3>
+                  <p className="mb-3 text-xs font-semibold text-[#314a40]">
+                    選擇檔案類型後上傳 CSV 檔案
+                  </p>
+                  <div className="mb-3 flex gap-2">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={csvType === "songs"}
+                        onChange={() => setCsvType("songs")}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm font-semibold">歌曲</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={csvType === "podcasts"}
+                        onChange={() => setCsvType("podcasts")}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm font-semibold">Podcast</span>
+                    </label>
+                  </div>
+                  <label className="block">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleCSVUpload}
+                      disabled={csvLoading}
+                      className={`${fieldClass} disabled:opacity-50`}
+                    />
+                  </label>
+                  <p className="mt-2 text-sm font-semibold text-[#314a40]">
+                    {csvMessage}
+                  </p>
+                </div>
+
                 <form onSubmit={handleAddSong} className="space-y-5">
                   <div><label className={labelClass}>YouTube 歌曲連結或影片 ID</label><input value={songForm.url} onChange={(event) => setSongForm({ ...songForm, url: event.target.value })} className={fieldClass} placeholder="https://www.youtube.com/watch?v=..." /></div>
                   <div className="grid gap-5 md:grid-cols-2"><div><label className={labelClass}>歌曲名稱</label><input value={songForm.title} onChange={(event) => setSongForm({ ...songForm, title: event.target.value })} className={fieldClass} placeholder="例如：優しい彗星" /></div><div><label className={labelClass}>歌手／作品</label><input value={songForm.artist} onChange={(event) => setSongForm({ ...songForm, artist: event.target.value })} className={fieldClass} placeholder="例如：YOASOBI" /></div></div>
@@ -412,6 +643,31 @@ export default function Admin() {
                       <form onSubmit={(event) => handleUpdateSong(event, song.id)} className="space-y-4"><div className="flex justify-between gap-3"><div><p className="text-sm font-black text-[#b7442e]">編輯中｜{song.level}｜{song.mood}</p><p className="mt-1 text-sm text-[#314a40]">YouTube ID：{song.id}</p></div><button type="button" disabled={isMutating} onClick={() => { setEditingSongId(null); setEditSongForm(emptySongForm); }} className="inline-flex items-center gap-2 border border-[#21392f]/30 px-3 py-2 text-sm font-black transition hover:bg-[#21392f] hover:text-[#fff7e6]"><X className="h-4 w-4" /> 取消</button></div><div className="grid gap-4 md:grid-cols-2"><input value={editSongForm.title} onChange={(event) => setEditSongForm({ ...editSongForm, title: event.target.value })} className={fieldClass} /><input value={editSongForm.artist} onChange={(event) => setEditSongForm({ ...editSongForm, artist: event.target.value })} className={fieldClass} /></div><div className="grid gap-4 md:grid-cols-3"><select value={editSongForm.level} onChange={(event) => setEditSongForm({ ...editSongForm, level: event.target.value as Level })} className={fieldClass}>{levels.map((item) => <option key={item.level} value={item.level}>{item.level}｜{item.label}</option>)}</select><input value={editSongForm.mood} onChange={(event) => setEditSongForm({ ...editSongForm, mood: event.target.value })} className={fieldClass} /><input value={editSongForm.channel} onChange={(event) => setEditSongForm({ ...editSongForm, channel: event.target.value })} className={fieldClass} /></div><div className="grid gap-4 md:grid-cols-2"><input value={editSongForm.channelUrl} onChange={(event) => setEditSongForm({ ...editSongForm, channelUrl: event.target.value })} className={fieldClass} placeholder="原頻道網址" /><input value={editSongForm.lyricsUrl} onChange={(event) => setEditSongForm({ ...editSongForm, lyricsUrl: event.target.value })} className={fieldClass} placeholder="官方歌詞網址" /></div><textarea value={editSongForm.reason} onChange={(event) => setEditSongForm({ ...editSongForm, reason: event.target.value })} className={`${fieldClass} min-h-20`} /><textarea value={editSongForm.lyricsNote} onChange={(event) => setEditSongForm({ ...editSongForm, lyricsNote: event.target.value })} className={`${fieldClass} min-h-20`} /><div className="grid gap-4 md:grid-cols-2"><textarea value={editSongForm.vocabularyNotes} onChange={(event) => setEditSongForm({ ...editSongForm, vocabularyNotes: event.target.value })} className={`${fieldClass} min-h-24`} /><textarea value={editSongForm.grammarNotes} onChange={(event) => setEditSongForm({ ...editSongForm, grammarNotes: event.target.value })} className={`${fieldClass} min-h-24`} /></div><textarea value={editSongForm.listeningPrompt} onChange={(event) => setEditSongForm({ ...editSongForm, listeningPrompt: event.target.value })} className={`${fieldClass} min-h-20`} /><Button type="submit" disabled={isMutating} className="h-11 rounded-none bg-[#21392f] px-6 text-sm font-bold text-[#fff7e6] shadow-[4px_4px_0_#b7442e] transition hover:-translate-y-0.5 hover:bg-[#2f5d46]"><Pencil className="mr-2 h-4 w-4" /> 儲存歌曲</Button></form>
                     ) : (
                       <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-black text-[#b7442e]">{song.level}｜{song.mood}</p><p className="mt-1 font-bold">{song.title}</p><p className="mt-1 text-sm text-[#314a40]">{song.artist}｜{song.channel}</p>{song.lyricsUrl ? <a href={song.lyricsUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-black text-[#24628f] underline decoration-[#24628f]/40 underline-offset-4">歌詞來源 <ExternalLink className="h-3 w-3" /></a> : null}<p className="mt-2 text-sm leading-6 text-[#314a40]/80">{song.reason}</p><p className="mt-2 text-xs leading-5 text-[#314a40]/70">歌詞備註：{song.lyricsNote}</p></div><div className="flex shrink-0 gap-2"><button disabled={isMutating} onClick={() => startEditSong(song)} className="border border-[#21392f]/30 p-2 text-[#24628f] transition hover:bg-[#24628f] hover:text-[#fff7e6]" aria-label="編輯歌曲"><Pencil className="h-4 w-4" /></button><button disabled={isMutating} onClick={() => deleteSongMutation.mutate({ youtubeId: song.id })} className="border border-[#21392f]/30 p-2 text-[#b7442e] transition hover:bg-[#b7442e] hover:text-[#fff7e6]" aria-label="移除歌曲"><Trash2 className="h-4 w-4" /></button></div></div>
+                    )}</div>)}</div>
+                  )}
+                </div>
+              </section>
+
+              {/* Podcast 管理區塊 */}
+              <section className="space-y-6 border-t-2 border-[#21392f] pt-10">
+                <div><p className="text-sm font-black uppercase tracking-[0.28em] text-[#b7442e]">Podcast Hub</p><h2 className="mt-2 flex items-center gap-2 font-serif text-3xl font-black"><Radio className="h-7 w-7" /> Podcast 管理</h2><p className="mt-3 text-sm leading-6 text-[#314a40]">可以新增、編輯和刪除 Podcast 資訊。支持 Spotify、Apple Podcast、YouTube 等平台。</p></div>
+
+                <form onSubmit={handleAddPodcast} className="space-y-5">
+                  <div className="grid gap-5 md:grid-cols-2"><div><label className={labelClass}>Podcast ID</label><input value={podcastForm.podcastId} onChange={(event) => setPodcastForm({ ...podcastForm, podcastId: event.target.value })} className={fieldClass} placeholder="例如：nhk-easy-japanese" /></div><div><label className={labelClass}>Podcast 名稱</label><input value={podcastForm.name} onChange={(event) => setPodcastForm({ ...podcastForm, name: event.target.value })} className={fieldClass} placeholder="例如：NHK Easy Japanese" /></div></div>
+                  <div className="grid gap-5 md:grid-cols-2"><div><label className={labelClass}>主持人／頻道名稱</label><input value={podcastForm.host} onChange={(event) => setPodcastForm({ ...podcastForm, host: event.target.value })} className={fieldClass} placeholder="例如：NHK WORLD" /></div><div><label className={labelClass}>JLPT 級別</label><select value={podcastForm.level} onChange={(event) => setPodcastForm({ ...podcastForm, level: event.target.value as Level })} className={fieldClass}>{levels.map((item) => <option key={item.level} value={item.level}>{item.level}｜{item.label}</option>)}</select></div></div>
+                  <div className="grid gap-5 md:grid-cols-2"><div><label className={labelClass}>平台名稱</label><input value={podcastForm.platform} onChange={(event) => setPodcastForm({ ...podcastForm, platform: event.target.value })} className={fieldClass} placeholder="例如：Spotify、Apple Podcast" /></div><div><label className={labelClass}>平台連結</label><input value={podcastForm.platformUrl} onChange={(event) => setPodcastForm({ ...podcastForm, platformUrl: event.target.value })} className={fieldClass} placeholder="https://..." /></div></div>
+                  <div><label className={labelClass}>描述</label><textarea value={podcastForm.description} onChange={(event) => setPodcastForm({ ...podcastForm, description: event.target.value })} className={`${fieldClass} min-h-20`} placeholder="例如：官方推出的初級日文學習 Podcast。" /></div>
+                  <div><label className={labelClass}>封面圖片 URL（可選）</label><input value={podcastForm.coverImageUrl} onChange={(event) => setPodcastForm({ ...podcastForm, coverImageUrl: event.target.value })} className={fieldClass} placeholder="https://..." /></div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><Button type="submit" disabled={isMutating} className="h-12 rounded-none bg-[#21392f] px-7 text-base font-bold text-[#fff7e6] shadow-[5px_5px_0_#b7442e] transition hover:-translate-y-1 hover:bg-[#2f5d46] disabled:cursor-not-allowed disabled:opacity-70"><Plus className="mr-2 h-4 w-4" /> {addPodcastMutation.isPending ? "新增中……" : "新增 Podcast"}</Button><p className="text-sm font-semibold text-[#314a40]">{podcastMessage}</p></div>
+                </form>
+
+                <div className="border-t border-[#21392f]/20 pt-6">
+                  <h3 className="mb-4 font-serif text-2xl font-black">管理員維護的 Podcast</h3>
+                  {podcastsLoading ? <p className="border border-[#21392f]/20 bg-[#fff8e9] p-4 text-sm font-semibold text-[#314a40]">正在載入 Podcast……</p> : podcasts.length === 0 ? <p className="border border-[#21392f]/20 bg-[#fff8e9] p-4 text-sm font-semibold text-[#314a40]">目前尚未新增 Podcast。</p> : (
+                    <div className="space-y-3">{podcasts.map((podcast) => <div key={podcast.id} className="border border-[#21392f]/20 bg-[#fff8e9] p-4">{editingPodcastId === podcast.id ? (
+                      <form onSubmit={(event) => handleUpdatePodcast(event, podcast.id)} className="space-y-4"><div className="flex justify-between gap-3"><div><p className="text-sm font-black text-[#b7442e]">編輯中｜{podcast.level}｜{podcast.platform}</p><p className="mt-1 text-sm text-[#314a40]">Podcast ID：{podcast.id}</p></div><button type="button" disabled={isMutating} onClick={() => { setEditingPodcastId(null); setEditPodcastForm(emptyPodcastForm); }} className="inline-flex items-center gap-2 border border-[#21392f]/30 px-3 py-2 text-sm font-black transition hover:bg-[#21392f] hover:text-[#fff7e6]"><X className="h-4 w-4" /> 取消</button></div><div className="grid gap-4 md:grid-cols-2"><input value={editPodcastForm.name} onChange={(event) => setEditPodcastForm({ ...editPodcastForm, name: event.target.value })} className={fieldClass} /><input value={editPodcastForm.host} onChange={(event) => setEditPodcastForm({ ...editPodcastForm, host: event.target.value })} className={fieldClass} /></div><div className="grid gap-4 md:grid-cols-3"><select value={editPodcastForm.level} onChange={(event) => setEditPodcastForm({ ...editPodcastForm, level: event.target.value as Level })} className={fieldClass}>{levels.map((item) => <option key={item.level} value={item.level}>{item.level}｜{item.label}</option>)}</select><input value={editPodcastForm.platform} onChange={(event) => setEditPodcastForm({ ...editPodcastForm, platform: event.target.value })} className={fieldClass} /><input value={editPodcastForm.platformUrl} onChange={(event) => setEditPodcastForm({ ...editPodcastForm, platformUrl: event.target.value })} className={fieldClass} placeholder="https://..." /></div><textarea value={editPodcastForm.description} onChange={(event) => setEditPodcastForm({ ...editPodcastForm, description: event.target.value })} className={`${fieldClass} min-h-20`} /><input value={editPodcastForm.coverImageUrl} onChange={(event) => setEditPodcastForm({ ...editPodcastForm, coverImageUrl: event.target.value })} className={fieldClass} placeholder="封面圖片 URL" /><Button type="submit" disabled={isMutating} className="h-11 rounded-none bg-[#21392f] px-6 text-sm font-bold text-[#fff7e6] shadow-[4px_4px_0_#b7442e] transition hover:-translate-y-0.5 hover:bg-[#2f5d46]"><Pencil className="mr-2 h-4 w-4" /> 儲存編輯</Button></form>
+                    ) : (
+                      <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-black text-[#b7442e]">{podcast.level}｜{podcast.platform}</p><p className="mt-1 font-bold">{podcast.name}</p><p className="mt-1 text-sm text-[#314a40]">{podcast.host}</p>{podcast.platformUrl ? <a href={podcast.platformUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-black text-[#24628f] underline decoration-[#24628f]/40 underline-offset-4">平台連結 <ExternalLink className="h-3 w-3" /></a> : null}<p className="mt-2 text-sm leading-6 text-[#314a40]/80">{podcast.description}</p></div><div className="flex shrink-0 gap-2"><button disabled={isMutating} onClick={() => startEditPodcast(podcast)} className="border border-[#21392f]/30 p-2 text-[#24628f] transition hover:bg-[#24628f] hover:text-[#fff7e6]" aria-label="編輯 Podcast"><Pencil className="h-4 w-4" /></button><button disabled={isMutating} onClick={() => deletePodcastMutation.mutate({ podcastId: podcast.id })} className="border border-[#21392f]/30 p-2 text-[#b7442e] transition hover:bg-[#b7442e] hover:text-[#fff7e6]" aria-label="移除 Podcast"><Trash2 className="h-4 w-4" /></button></div></div>
                     )}</div>)}</div>
                   )}
                 </div>
