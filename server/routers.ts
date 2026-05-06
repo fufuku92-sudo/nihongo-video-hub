@@ -147,7 +147,7 @@ let mockPodcasts = [
   },
 ];
 
-let pageViews = 12456;
+let pageViews = 46;
 
 // CSV 解析函數
 function parseCSVLine(line: string): string[] {
