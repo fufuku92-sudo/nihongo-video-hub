@@ -344,7 +344,7 @@ export default function Home() {
         </div>
 
         <div className={HOME_MOTION.tabViewport} aria-live="polite">
-          {/* Videos Tab - 完整保留 */}
+          {/* Videos Tab - 加入收藏按鈕 */}
           {activeStudyMode === "videos" ? (
             <section key="videos-tab-panel" id="catalog" className={`relative px-5 py-16 md:px-10 lg:px-16 ${HOME_MOTION.videoTabPanel}`}>
               <div className="mx-auto max-w-7xl">
@@ -374,7 +374,7 @@ export default function Home() {
                       </select>
                     </label>
                     <label className="block">
-                      <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#314a40]/80]">主題</span>
+                      <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#314a40]/80">主題</span>
                       <select
                         value={activeTopic}
                         onChange={(event) => switchTopic(event.target.value as "全部" | Topic)}
@@ -443,7 +443,24 @@ export default function Home() {
                               前往原頻道 <ExternalLink className="h-4 w-4" />
                             </a>
                           ) : null}
-                          <span className="inline-flex items-center border border-[#21392f]/25 px-4 py-2 text-sm font-bold text-[#21392f]/80">標記：{selectedVideo.confidence}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isBookmarked(selectedVideo.id, "video")) {
+                                removeBookmark(selectedVideo.id, "video");
+                              } else {
+                                addBookmark(selectedVideo.id, "video", selectedVideo.title);
+                              }
+                            }}
+                            className={`inline-flex items-center gap-2 border px-4 py-2 text-sm font-bold transition ${
+                              isBookmarked(selectedVideo.id, "video")
+                                ? "border-[#b7442e] bg-[#b7442e] text-white"
+                                : "border-[#21392f]/30 bg-white text-[#b7442e] hover:-translate-y-0.5"
+                            }`}
+                          >
+                            <Heart className="h-4 w-4" fill="currentColor" />
+                            {isBookmarked(selectedVideo.id, "video") ? "已收藏" : "收藏影片"}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -481,6 +498,24 @@ export default function Home() {
                             <button type="button" onClick={() => setSelectedVideoId(video.id)} className="inline-flex items-center gap-2 border border-[#21392f] bg-[#21392f] px-3 py-2 text-xs font-black text-[#fff7e6] transition hover:-translate-y-0.5">
                               播放影片 <PlayCircle className="h-3.5 w-3.5" />
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isBookmarked(video.id, "video")) {
+                                  removeBookmark(video.id, "video");
+                                } else {
+                                  addBookmark(video.id, "video", video.title);
+                                }
+                              }}
+                              className={`inline-flex items-center gap-2 border px-3 py-2 text-xs font-black transition ${
+                                isBookmarked(video.id, "video")
+                                  ? "border-[#b7442e] bg-[#b7442e] text-white"
+                                  : "border-[#21392f]/20 bg-white text-[#b7442e] hover:-translate-y-0.5"
+                              }`}
+                            >
+                              <Heart className="h-3.5 w-3.5" fill="currentColor" />
+                              {isBookmarked(video.id, "video") ? "已收藏" : "收藏"}
+                            </button>
                             {video.channelUrl ? (
                               <a href={video.channelUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#24628f] bg-[#f8f0de] px-3 py-2 text-xs font-black text-[#24628f] transition hover:-translate-y-0.5 hover:bg-[#24628f] hover:text-[#fff7e6]">
                                 前往原頻道 <ExternalLink className="h-3.5 w-3.5" />
@@ -496,7 +531,7 @@ export default function Home() {
             </section>
           ) : null}
 
-          {/* Songs Tab - 完整保留 */}
+          {/* Songs Tab - 加入收藏按鈕 */}
           {activeStudyMode === "songs" ? (
             <section key="songs-tab-panel" id="songs" className={`relative border-y border-[#21392f]/15 bg-[#21392f] px-5 py-16 text-[#fff7e6] md:px-10 lg:px-16 ${HOME_MOTION.songTabPanel}`}>
               <div className="absolute inset-0 bg-[url('https://d2xsxph8kpxj0f.cloudfront.net/310519663615536359/Eo5zKxPE3r647x6NkNQoe5/nihongo_paper_pattern-2qjVZvdvYrMsj2KwtsxgWV.webp')] bg-cover bg-center opacity-10" />
@@ -588,6 +623,24 @@ export default function Home() {
                           <a href={`https://www.youtube.com/watch?v=${selectedSong.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#21392f] bg-[#21392f] px-4 py-2 text-sm font-bold text-[#fff7e6] transition hover:-translate-y-0.5">到 YouTube 原頁 <ExternalLink className="h-4 w-4" /></a>
                           {selectedSong.lyricsUrl ? <a href={selectedSong.lyricsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#24628f] bg-[#f8f0de] px-4 py-2 text-sm font-bold text-[#24628f] transition hover:-translate-y-0.5 hover:bg-[#24628f] hover:text-[#fff7e6]">官方／授權歌詞來源 <ExternalLink className="h-4 w-4" /></a> : null}
                           {selectedSong.channelUrl ? <a href={selectedSong.channelUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-[#2f5d46] bg-[#f8f0de] px-4 py-2 text-sm font-bold text-[#2f5d46] transition hover:-translate-y-0.5 hover:bg-[#2f5d46] hover:text-[#fff7e6]">前往原頻道 <ExternalLink className="h-4 w-4" /></a> : null}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isBookmarked(selectedSong.id, "song")) {
+                                removeBookmark(selectedSong.id, "song");
+                              } else {
+                                addBookmark(selectedSong.id, "song", selectedSong.title);
+                              }
+                            }}
+                            className={`inline-flex items-center gap-2 border px-4 py-2 text-sm font-bold transition ${
+                              isBookmarked(selectedSong.id, "song")
+                                ? "border-[#b7442e] bg-[#b7442e] text-white"
+                                : "border-[#21392f]/30 bg-white text-[#b7442e] hover:-translate-y-0.5"
+                            }`}
+                          >
+                            <Heart className="h-4 w-4" fill="currentColor" />
+                            {isBookmarked(selectedSong.id, "song") ? "已收藏" : "收藏歌曲"}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -610,10 +663,33 @@ export default function Home() {
                   <div className={`mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3 ${HOME_MOTION.songGrid}`}>
                     {filteredSongs.map((song) => (
                       <button key={song.id} type="button" onClick={() => setSelectedSongId(song.id)} className={`border-2 p-5 text-left transition ${selectedSong?.id === song.id ? "border-[#f1b35b] bg-[#f8f0de] text-[#21392f] shadow-[7px_7px_0_#f1b35b]" : "border-[#f4ecd8]/25 bg-[#fff8e9]/10 text-[#fff7e6] hover:-translate-y-1 hover:border-[#f4ecd8]"}`}>
-                        <span className="inline-flex items-center gap-2 bg-[#b7442e] px-3 py-1 text-sm font-black text-[#fff7e6]"><Music2 className="h-4 w-4" /> {song.level}</span>
-                        <h4 className="mt-4 font-serif text-xl font-black leading-snug">{song.title}</h4>
-                        <p className={`mt-2 text-sm font-bold ${selectedSong?.id === song.id ? "text-[#24628f]" : "text-[#f4ecd8]/80"}`}>{song.artist}</p>
-                        <p className={`mt-3 text-sm leading-6 ${selectedSong?.id === song.id ? "text-[#314a40]" : "text-[#f4ecd8]/75"}`}>{song.reason}</p>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <span className="inline-flex items-center gap-2 bg-[#b7442e] px-3 py-1 text-sm font-black text-[#fff7e6]"><Music2 className="h-4 w-4" /> {song.level}</span>
+                            <h4 className="mt-4 font-serif text-xl font-black leading-snug">{song.title}</h4>
+                            <p className={`mt-2 text-sm font-bold ${selectedSong?.id === song.id ? "text-[#24628f]" : "text-[#f4ecd8]/80"}`}>{song.artist}</p>
+                            <p className={`mt-3 text-sm leading-6 ${selectedSong?.id === song.id ? "text-[#314a40]" : "text-[#f4ecd8]/75"}`}>{song.reason}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isBookmarked(song.id, "song")) {
+                                removeBookmark(song.id, "song");
+                              } else {
+                                addBookmark(song.id, "song", song.title);
+                              }
+                            }}
+                            className={`shrink-0 p-2 transition ${
+                              isBookmarked(song.id, "song")
+                                ? "text-[#b7442e]"
+                                : "text-[#f4ecd8]/40 hover:text-[#b7442e]"
+                            }`}
+                            title={isBookmarked(song.id, "song") ? "移除收藏" : "加入收藏"}
+                          >
+                            <Heart className="h-5 w-5" fill="currentColor" />
+                          </button>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -622,7 +698,7 @@ export default function Home() {
             </section>
           ) : null}
 
-          {/* Podcasts Tab - 新增 */}
+          {/* Podcasts Tab */}
           {activeStudyMode === "podcasts" ? (
             <section key="podcasts-tab-panel" id="podcasts" className={`relative border-y border-[#21392f]/15 bg-[#fff8e9] px-5 py-16 md:px-10 lg:px-16 ${HOME_MOTION.songTabPanel}`}>
               <div className="mx-auto max-w-7xl">
@@ -703,7 +779,7 @@ export default function Home() {
                   <div className="border-2 border-[#21392f] bg-[#fff8e9] p-8 text-center">
                     <Radio className="mb-4 h-9 w-9 mx-auto text-[#b7442e]" />
                     <p className="text-lg font-semibold text-[#314a40]">暫無 Podcast</p>
-                    <p className="mt-2 text-sm text-[#314a40]/70">管理員尚未新增 Podcast</p>
+                    <p className="mt-2 text-sm text-[#314a40]/70]">管理員尚未新增 Podcast</p>
                   </div>
                 )}
               </div>
