@@ -66,7 +66,7 @@ const levels: Array<{ level: Level; label: string; description: string; color: s
 
 const topics: Array<"全部" | Topic> = ["全部", "文法", "單字", "聽解", "讀解", "綜合"];
 
-const seedVideos: VideoItem[] = [];
+const seedVideos: VideoItem[] = [ { id: "3MPbTCqIkuM", channelUrl: "https://www.youtube.com/@journeytojapan_sakina", level: "N5", topic: "文法", title: "JLPT N5 Grammar Practice｜N5 文法過去問解説", channel: "SAKINA | JOURNEY TO JAPAN", reason: "適合作為 N5 文法練習入口，標題與級別明確。", confidence: "高" },];
 
 function topicIcon(topic: Topic) {
   if (topic === "聽解") return <Headphones className="h-4 w-4" />;
